@@ -51,7 +51,7 @@ export function DonutChart({ segments, size = 160, strokeWidth = 22, centerValue
         <Circle cx={center} cy={center} r={radius} fill="none" stroke="#1E2A3A" strokeWidth={strokeWidth} />
         {rings}
       </Svg>
-      <View style={{ alignItems: "center", pointerEvents: "none" }}>
+      <View style={{ alignItems: "center" }}>
         {centerValue ? (
           <Text style={styles.centerValue}>{centerValue}</Text>
         ) : null}
