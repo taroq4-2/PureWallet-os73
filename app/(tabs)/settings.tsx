@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CategorySelector } from "@/components/CategorySelector";
 import { PinPad } from "@/components/PinPad";
 import { useAuth } from "@/context/AuthContext";
+import { useSms } from "@/context/SmsContext";
 import { useTransactions } from "@/context/TransactionsContext";
 import { useColors } from "@/hooks/useColors";
 import { BANK_REGEX_TEMPLATES } from "@/utils/bankTemplates";
@@ -29,6 +30,7 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const { addTransaction, clearAllData, transactions } = useTransactions();
   const { pinSet, biometricEnabled, biometricAvailable, setupPin, removePin, toggleBiometric, lock } = useAuth();
+  const { permission, scanning, lastScan, totalImported, requestPermission, scan, scanHistorical } = useSms();
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
@@ -38,6 +40,7 @@ export default function SettingsScreen() {
   const [pinStep, setPinStep] = useState<"enter" | "confirm">("enter");
   const [firstPin, setFirstPin] = useState("");
   const [pinError, setPinError] = useState("");
+  const [smsResult, setSmsResult] = useState<string | null>(null);
 
   const [merchant, setMerchant] = useState("");
   const [amount, setAmount] = useState("");
@@ -132,6 +135,50 @@ export default function SettingsScreen() {
     ]);
   };
 
+  const handleRequestSms = async () => {
+    const ok = await requestPermission();
+    if (!ok) {
+      Alert.alert(
+        "الصلاحية مرفوضة",
+        permission === "blocked"
+          ? "يرجى الذهاب إلى إعدادات الجهاز ومنح صلاحية قراءة الرسائل يدوياً."
+          : "يحتاج التطبيق لهذه الصلاحية لقراءة رسائل البنك.",
+      );
+    }
+  };
+
+  const handleScanNow = async () => {
+    setSmsResult(null);
+    const added = await scan();
+    setSmsResult(added > 0 ? `تم استيراد ${added} عملية جديدة ✓` : "لا توجد رسائل بنكية جديدة");
+    if (Platform.OS !== "web" && added > 0) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+  };
+
+  const handleScanHistorical = async () => {
+    setSmsResult(null);
+    const added = await scanHistorical();
+    setSmsResult(
+      added > 0 ? `تم استيراد ${added} عملية من آخر 90 يوم ✓` : "لا توجد رسائل بنكية في آخر 90 يوم",
+    );
+    if (Platform.OS !== "web" && added > 0) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+  };
+
+  const smsPermissionLabel =
+    permission === "granted"
+      ? "مفعّل ✓"
+      : permission === "blocked"
+      ? "محجوب (الإعدادات)"
+      : permission === "denied"
+      ? "مرفوض"
+      : "غير مفعّل";
+
+  const smsPermissionColor =
+    permission === "granted" ? "#10B981" : permission === "blocked" ? "#F43F5E" : colors.mutedForeground;
+
   return (
     <ScrollView
       style={[styles.screen, { backgroundColor: colors.background }]}
@@ -151,6 +198,85 @@ export default function SettingsScreen() {
         label="إضافة عملية يدوياً"
         onPress={() => setShowAddModal(true)}
       />
+
+      {Platform.OS === "android" && (
+        <>
+          <SectionTitle title="رسائل SMS" colors={colors} />
+
+          <View style={[styles.smsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.smsHeader}>
+              <View style={[styles.smsIcon, { backgroundColor: "#3B82F622" }]}>
+                <Feather name="message-square" size={16} color="#3B82F6" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.smsTitle, { color: colors.foreground }]}>استيراد رسائل البنك</Text>
+                <Text style={[styles.smsSubtitle, { color: smsPermissionColor }]}>{smsPermissionLabel}</Text>
+              </View>
+              {totalImported > 0 && (
+                <View style={[styles.countBadge, { backgroundColor: "#3B82F622" }]}>
+                  <Text style={[styles.countText, { color: "#3B82F6" }]}>{totalImported} مستورد</Text>
+                </View>
+              )}
+            </View>
+
+            <Text style={[styles.smsDesc, { color: colors.mutedForeground }]}>
+              يقرأ التطبيق رسائل البنوك المحلية ويستورد العمليات تلقائياً. لا تُرفع أي بيانات للإنترنت.
+            </Text>
+
+            {lastScan > 0 && (
+              <Text style={[styles.lastScanText, { color: colors.mutedForeground }]}>
+                آخر مسح: {new Date(lastScan).toLocaleTimeString("ar-SA")}
+              </Text>
+            )}
+
+            {smsResult && (
+              <View style={[styles.resultBanner, { backgroundColor: smsResult.includes("✓") ? "#10B98122" : colors.muted }]}>
+                <Text style={[styles.resultText, { color: smsResult.includes("✓") ? "#10B981" : colors.mutedForeground }]}>
+                  {smsResult}
+                </Text>
+              </View>
+            )}
+
+            <View style={styles.smsBtns}>
+              {permission !== "granted" ? (
+                <TouchableOpacity
+                  style={[styles.smsBtn, { backgroundColor: "#3B82F6" }]}
+                  onPress={handleRequestSms}
+                >
+                  <Feather name="shield" size={15} color="#fff" />
+                  <Text style={styles.smsBtnText}>منح الصلاحية</Text>
+                </TouchableOpacity>
+              ) : (
+                <>
+                  <TouchableOpacity
+                    style={[styles.smsBtn, { backgroundColor: colors.primary, opacity: scanning ? 0.6 : 1 }]}
+                    onPress={handleScanNow}
+                    disabled={scanning}
+                  >
+                    <Feather name="refresh-cw" size={15} color="#fff" />
+                    <Text style={styles.smsBtnText}>{scanning ? "جاري المسح..." : "مسح الجديد"}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.smsBtn, { backgroundColor: colors.muted, borderWidth: 1, borderColor: colors.border, opacity: scanning ? 0.6 : 1 }]}
+                    onPress={handleScanHistorical}
+                    disabled={scanning}
+                  >
+                    <Feather name="clock" size={15} color={colors.foreground} />
+                    <Text style={[styles.smsBtnText, { color: colors.foreground }]}>استيراد 90 يوم</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
+
+            <View style={styles.smsBanks}>
+              <Text style={[styles.smsBanksLabel, { color: colors.mutedForeground }]}>البنوك المدعومة: </Text>
+              <Text style={[styles.smsBanksLabel, { color: colors.primary }]}>
+                الراجحي • الأهلي • الرياض • العربي الوطني
+              </Text>
+            </View>
+          </View>
+        </>
+      )}
 
       <SectionTitle title="الأمان والخصوصية" colors={colors} />
 
@@ -372,6 +498,20 @@ const styles = StyleSheet.create({
   settingRow: { flexDirection: "row", alignItems: "center", marginHorizontal: 16, padding: 14, borderRadius: 14, borderWidth: 1, marginBottom: 8, gap: 12 },
   settingIcon: { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" },
   settingLabel: { flex: 1, fontSize: 15, fontWeight: "500" },
+  smsCard: { marginHorizontal: 16, borderRadius: 14, borderWidth: 1, padding: 14, marginBottom: 8, gap: 10 },
+  smsHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
+  smsIcon: { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  smsTitle: { fontSize: 14, fontWeight: "600" },
+  smsSubtitle: { fontSize: 12, marginTop: 1 },
+  smsDesc: { fontSize: 12, lineHeight: 18 },
+  lastScanText: { fontSize: 11 },
+  resultBanner: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 7 },
+  resultText: { fontSize: 13, fontWeight: "600" },
+  smsBtns: { flexDirection: "row", gap: 8 },
+  smsBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 10, borderRadius: 10 },
+  smsBtnText: { color: "#fff", fontSize: 13, fontWeight: "600" },
+  smsBanks: { flexDirection: "row", flexWrap: "wrap" },
+  smsBanksLabel: { fontSize: 11 },
   securityCard: { marginHorizontal: 16, borderRadius: 14, borderWidth: 1, padding: 14, marginBottom: 8 },
   secRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   secIcon: { width: 34, height: 34, borderRadius: 10, alignItems: "center", justifyContent: "center" },
