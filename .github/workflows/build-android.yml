@@ -34,7 +34,7 @@ jobs:
           java-version: "17"
 
       - name: Expo prebuild (generate Android native project)
-        run: npx expo prebuild --platform android --clean
+        run: npx expo prebuild --platform android --clean --no-install
         env:
           EXPO_NO_TELEMETRY: 1
 
