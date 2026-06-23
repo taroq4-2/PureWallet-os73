@@ -18,22 +18,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Install EAS CLI
         run: npm install -g eas-cli
 
       - name: Build Android APK
-        run: eas build --platform android --profile preview --non-interactive --no-wait
+        run: eas build --platform android --profile preview --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Check build status
-        run: |
-          echo "Build submitted to EAS Build Cloud."
-          echo "Track build progress at: https://expo.dev/accounts/[your-account]/projects/pure-wallet/builds"
-          echo ""
-          echo "Once complete, download link will be available in the Expo dashboard."
+      - name: Done
+        run: echo "✅ APK build submitted to EAS Cloud!"
