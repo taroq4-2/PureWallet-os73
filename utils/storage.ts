@@ -20,6 +20,7 @@ export interface StoredTransaction {
   timestamp: number;
   categoryId: string;
   isManual: boolean;
+  smsId?: string;
 }
 
 export type MerchantCategoryMap = Record<string, string>;
