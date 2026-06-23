@@ -84,12 +84,12 @@ export default function DashboardScreen() {
                 <Feather
                   name={isIncrease ? "trending-up" : "trending-down"}
                   size={13}
-                  color={isIncrease ? (colors as any).negative : (colors as any).positive}
+                  color={isIncrease ? colors.negative : colors.positive}
                 />
                 <Text
                   style={[
                     styles.changeText,
-                    { color: isIncrease ? (colors as any).negative : (colors as any).positive },
+                    { color: isIncrease ? colors.negative : colors.positive },
                   ]}
                 >
                   {Math.abs(monthStats.changePercent).toFixed(1)}% عن الشهر الماضي
