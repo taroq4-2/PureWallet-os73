@@ -12,24 +12,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@v4
         with:
-          node-version: "22"
+          version: "10"
+          run_install: false
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
         with:
-          version: 10
+          node-version: "20"
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
-      - name: Run TypeScript typecheck
-        run: pnpm exec tsc -p tsconfig.json --noEmit
+      - name: TypeScript check
+        run: pnpm run typecheck
 
-      - name: Success
-        run: echo "✅ TypeScript check passed!"
+      - run: echo "✅ TypeScript check passed!"
