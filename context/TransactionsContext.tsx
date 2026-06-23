@@ -11,32 +11,11 @@ import {
   MerchantCategoryMap,
   StoredTransaction,
   clearAll,
-  isSeeded,
   loadMerchantMap,
   loadTransactions,
-  markSeeded,
   saveMerchantMap,
   saveTransactions,
 } from "@/utils/storage";
-
-const now = Date.now();
-const d = (days: number) => now - days * 86_400_000;
-const h = (hours: number) => now - hours * 3_600_000;
-
-const SEED: StoredTransaction[] = [
-  { id: "s1",  bankName: "بنك الراجحي",           amount: 152.50, merchantName: "بنده سوبر ماركت",    timestamp: d(3),  categoryId: "groceries",    isManual: false },
-  { id: "s2",  bankName: "البنك الأهلي السعودي",  amount: 45.00,  merchantName: "ستاربكس",            timestamp: d(2),  categoryId: "cafes",        isManual: false },
-  { id: "s3",  bankName: "بنك الراجحي",           amount: 200.00, merchantName: "محطة شل",            timestamp: d(4),  categoryId: "fuel",         isManual: false },
-  { id: "s4",  bankName: "بنك الرياض",            amount: 89.50,  merchantName: "جرير",              timestamp: d(5),  categoryId: "shopping",     isManual: false },
-  { id: "s5",  bankName: "بنك الراجحي",           amount: 120.00, merchantName: "كارفور",             timestamp: d(7),  categoryId: "groceries",    isManual: false },
-  { id: "s6",  bankName: "البنك الأهلي السعودي",  amount: 35.00,  merchantName: "كوستا كافيه",        timestamp: d(6),  categoryId: "cafes",        isManual: false },
-  { id: "s7",  bankName: "بنك ساب",               amount: 450.00, merchantName: "متجر إلكتروني جديد", timestamp: h(1),  categoryId: "uncategorized",isManual: false },
-  { id: "s8",  bankName: "بنك الرياض",            amount: 75.00,  merchantName: "ماكدونالدز",         timestamp: d(1),  categoryId: "restaurants",  isManual: false },
-  { id: "s9",  bankName: "بنك الراجحي",           amount: 180.00, merchantName: "لولو هايبر ماركت",  timestamp: d(14), categoryId: "groceries",    isManual: false },
-  { id: "s10", bankName: "البنك الأهلي السعودي",  amount: 95.00,  merchantName: "متجر XYZ",           timestamp: h(2),  categoryId: "uncategorized",isManual: false },
-  { id: "s11", bankName: "بنك البلاد",            amount: 320.00, merchantName: "صيدلية النهدي",      timestamp: d(8),  categoryId: "health",       isManual: false },
-  { id: "s12", bankName: "بنك الراجحي",           amount: 58.00,  merchantName: "نتفليكس",            timestamp: d(10), categoryId: "entertainment", isManual: false },
-];
 
 export interface MonthStats {
   total: number;
@@ -99,17 +78,11 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
 
   useEffect(() => {
     (async () => {
-      const seeded = await isSeeded();
-      const stored = await loadTransactions();
-      const map    = await loadMerchantMap();
-
-      if (!seeded || stored.length === 0) {
-        await saveTransactions(SEED);
-        await markSeeded();
-        setTransactions(SEED);
-      } else {
-        setTransactions(stored);
-      }
+      const [stored, map] = await Promise.all([
+        loadTransactions(),
+        loadMerchantMap(),
+      ]);
+      setTransactions(stored);
       setMerchantMap(map);
       setLoading(false);
     })();
