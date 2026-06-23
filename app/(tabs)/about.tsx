@@ -50,14 +50,12 @@ export default function AboutScreen() {
       style={{ flex: 1, backgroundColor: colors.background }}
       contentContainerStyle={styles.container}
     >
-      {/* Header */}
       <View style={styles.header}>
         <Image source={LOGO} style={styles.logo} resizeMode="cover" />
         <Text style={[styles.appName, { color: colors.foreground }]}>PureWallet</Text>
         <Text style={[styles.version, { color: colors.mutedForeground }]}>الإصدار 1.0.0</Text>
       </View>
 
-      {/* Links */}
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>تواصل معنا</Text>
 
@@ -86,20 +84,18 @@ export default function AboutScreen() {
         />
       </View>
 
-      {/* Dua */}
       <View style={[styles.duaCard, { backgroundColor: colors.card, borderColor: colors.primary + "44" }]}>
         <Feather name="heart" size={22} color="#F43F5E" style={{ marginBottom: 14 }} />
         <Text style={[styles.duaText, { color: colors.foreground }]}>
           إذا استفدتَ من التطبيق
         </Text>
         <Text style={[styles.duaHighlight, { color: colors.primary }]}>
-          لا تنسانا من دعائك 🤍
+          لا تنسانا من دعائك
         </Text>
       </View>
 
-      {/* Footer */}
       <Text style={[styles.footer, { color: colors.mutedForeground }]}>
-        صُنع بـ ❤️ · OS73
+        صُنع بـ OS73
       </Text>
     </ScrollView>
   );
@@ -112,8 +108,6 @@ const styles = StyleSheet.create({
     paddingBottom: 110,
     alignItems: "center",
   },
-
-  /* Header */
   header: { alignItems: "center", marginBottom: 36 },
   logo: {
     width: 110,
@@ -128,8 +122,6 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   version: { fontSize: 13 },
-
-  /* Section */
   section: { width: "100%", marginBottom: 28 },
   sectionTitle: {
     fontSize: 12,
@@ -139,8 +131,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     textAlign: "right",
   },
-
-  /* Link Row */
   linkRow: {
     flexDirection: "row-reverse",
     alignItems: "center",
@@ -160,8 +150,6 @@ const styles = StyleSheet.create({
   linkText: { flex: 1, alignItems: "flex-end" },
   linkLabel: { fontSize: 11, marginBottom: 2 },
   linkValue: { fontSize: 15, fontWeight: "600" },
-
-  /* Dua */
   duaCard: {
     width: "100%",
     borderRadius: 20,
@@ -184,7 +172,5 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 34,
   },
-
-  /* Footer */
   footer: { fontSize: 12 },
 });
