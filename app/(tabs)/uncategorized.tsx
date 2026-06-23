@@ -91,9 +91,7 @@ export default function UncategorizedScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-  },
+  screen: { flex: 1 },
   header: {
     flexDirection: "row",
     alignItems: "center",
