@@ -21,8 +21,14 @@
     "android": {
       "package": "com.purewallet.app",
       "permissions": [
-        "android.permission.RECEIVE_SMS",
-        "android.permission.READ_SMS"
+        {
+          "name": "android.permission.RECEIVE_SMS",
+          "reason": "لاستقبال رسائل SMS البنكية الواردة في الوقت الفعلي وتحليلها محلياً على الجهاز دون إرسالها لأي خادم خارجي"
+        },
+        {
+          "name": "android.permission.READ_SMS",
+          "reason": "لقراءة رسائل SMS البنكية الموجودة في صندوق الوارد وتصنيف المصروفات تلقائياً، كل المعالجة تتم محلياً فقط"
+        }
       ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
@@ -41,7 +47,13 @@
       ],
       "expo-font",
       "expo-web-browser",
-      "expo-system-ui"
+      "expo-system-ui",
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": "السماح بالوصول الآمن إلى بياناتك المالية"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
