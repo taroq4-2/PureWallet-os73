@@ -56,7 +56,7 @@ export function TransactionCard({ transaction, onPress, onDelete, showCategoryAc
       </View>
 
       <View style={styles.right}>
-        <Text style={[styles.amount, { color: (colors as any).negative ?? "#F43F5E" }]}>
+        <Text style={[styles.amount, { color: colors.negative }]}>
           {transaction.amount.toFixed(2)} ر.س
         </Text>
         {showCategoryAction ? (
