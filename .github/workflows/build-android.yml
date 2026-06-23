@@ -14,12 +14,10 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
-        # version is read from packageManager field in package.json
 
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
-          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
@@ -29,10 +27,6 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      # ── Signing keystore ────────────────────────────────────────────────────
-      # Production: set KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_PASSWORD,
-      #             KEY_ALIAS as GitHub Actions repository secrets.
-      # CI testing: leave all secrets unset — an auto keystore is generated.
       - name: Setup signing keystore
         run: |
           if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
@@ -42,27 +36,22 @@ jobs:
             echo "KEY_PASS=${{ secrets.KEY_PASSWORD }}"     >> $GITHUB_ENV
             echo "KEY_ALIAS=${{ secrets.KEY_ALIAS }}"       >> $GITHUB_ENV
           else
-            echo "No keystore secret — generating auto-signed keystore for CI"
+            echo "No keystore secret — generating auto-signed keystore"
             AUTO_PASS=$(openssl rand -hex 24)
             keytool -genkeypair -v \
-              -keystore /tmp/purewallet.jks \
-              -alias purewallet \
-              -keyalg RSA -keysize 2048 \
-              -validity 10000 \
-              -storepass "$AUTO_PASS" \
-              -keypass   "$AUTO_PASS" \
-              -dname "CN=PureWallet,OU=OS73,O=OS73,L=Riyadh,ST=Riyadh,C=SA" \
-              -noprompt
+              -keystore /tmp/purewallet.jks -alias purewallet \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass "$AUTO_PASS" -keypass "$AUTO_PASS" \
+              -dname "CN=PureWallet,OU=OS73,O=OS73,L=Riyadh,ST=Riyadh,C=SA" -noprompt
             echo "KS_PASS=$AUTO_PASS"  >> $GITHUB_ENV
             echo "KEY_PASS=$AUTO_PASS" >> $GITHUB_ENV
             echo "KEY_ALIAS=purewallet" >> $GITHUB_ENV
           fi
 
-      - name: Expo prebuild (generate native Android project)
+      - name: Expo prebuild
         run: npx expo prebuild --platform android --clean --no-install
         env:
           EXPO_NO_TELEMETRY: "1"
-          EXPO_NO_DOTENV: "1"
 
       - name: Build signed release APK
         working-directory: android
@@ -77,25 +66,18 @@ jobs:
           NODE_OPTIONS: "--max-old-space-size=4096"
           GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.jvmargs=-Xmx3500m -XX:MaxMetaspaceSize=512m"
 
-      - name: Copy APK to output
+      - name: Copy APK
         run: |
           mkdir -p output
           APK=$(find android/app/build/outputs/apk/release -name "*.apk" | head -1)
-          if [ -z "$APK" ]; then echo "❌ APK not found"; exit 1; fi
+          [ -z "$APK" ] && echo "❌ APK not found" && exit 1
           cp "$APK" output/PureWallet-v2.0.0.apk
-          echo "APK_SIZE=$(du -h output/PureWallet-v2.0.0.apk | cut -f1)" >> $GITHUB_ENV
           ls -lh output/
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: PureWallet-release-apk
           path: output/PureWallet-v2.0.0.apk
           retention-days: 30
 
-      - name: Summary
-        run: |
-          echo "## ✅ APK Build Successful" >> $GITHUB_STEP_SUMMARY
-          echo "**Size:** $APK_SIZE" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Download **PureWallet-release-apk** from the Artifacts section above." >> $GITHUB_STEP_SUMMARY
+      - run: echo "## ✅ APK ready — download from Artifacts above" >> $GITHUB_STEP_SUMMARY
