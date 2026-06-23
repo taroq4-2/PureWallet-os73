@@ -21,14 +21,8 @@
     "android": {
       "package": "com.purewallet.app",
       "permissions": [
-        {
-          "name": "android.permission.RECEIVE_SMS",
-          "reason": "لاستقبال رسائل SMS البنكية الواردة في الوقت الفعلي وتحليلها محلياً على الجهاز دون إرسالها لأي خادم خارجي"
-        },
-        {
-          "name": "android.permission.READ_SMS",
-          "reason": "لقراءة رسائل SMS البنكية الموجودة في صندوق الوارد وتصنيف المصروفات تلقائياً، كل المعالجة تتم محلياً فقط"
-        }
+        "android.permission.RECEIVE_SMS",
+        "android.permission.READ_SMS"
       ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
