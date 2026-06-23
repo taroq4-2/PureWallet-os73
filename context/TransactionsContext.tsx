@@ -60,9 +60,9 @@ interface Ctx {
 const TransactionsContext = createContext<Ctx | null>(null);
 
 function getMonthRange(offset = 0) {
-  const d = new Date();
-  const start = new Date(d.getFullYear(), d.getMonth() + offset, 1).getTime();
-  const end   = new Date(d.getFullYear(), d.getMonth() + offset + 1, 0, 23, 59, 59).getTime();
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth() + offset, 1).getTime();
+  const end   = new Date(now.getFullYear(), now.getMonth() + offset + 1, 0, 23, 59, 59).getTime();
   return { start, end };
 }
 
