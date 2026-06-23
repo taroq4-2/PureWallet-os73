@@ -33,10 +33,34 @@ jobs:
           distribution: "temurin"
           java-version: "17"
 
-      - name: Decode and write keystore
+      # ── Keystore setup ──────────────────────────────────────────────────────
+      # Production: set KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_PASSWORD,
+      #             KEY_ALIAS as GitHub repository secrets.
+      # Testing:    leave secrets unset; a fresh keystore is auto-generated.
+      - name: Setup signing keystore
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > /tmp/purewallet.jks
-          echo "Keystore written"
+          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
+            echo "Using keystore from secret"
+            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > /tmp/purewallet.jks
+            echo "KS_PASS=${{ secrets.KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
+            echo "KEY_PASS=${{ secrets.KEY_PASSWORD }}"      >> $GITHUB_ENV
+            echo "KEY_ALIAS=${{ secrets.KEY_ALIAS }}"        >> $GITHUB_ENV
+          else
+            echo "No keystore secret — generating auto-signed keystore for testing"
+            AUTO_PASS=$(openssl rand -hex 24)
+            keytool -genkeypair -v \
+              -keystore /tmp/purewallet.jks \
+              -alias purewallet \
+              -keyalg RSA -keysize 2048 \
+              -validity 10000 \
+              -storepass "$AUTO_PASS" \
+              -keypass   "$AUTO_PASS" \
+              -dname "CN=PureWallet, OU=OS73, O=OS73, L=Riyadh, ST=Riyadh, C=SA" \
+              -noprompt
+            echo "KS_PASS=$AUTO_PASS"    >> $GITHUB_ENV
+            echo "KEY_PASS=$AUTO_PASS"   >> $GITHUB_ENV
+            echo "KEY_ALIAS=purewallet"  >> $GITHUB_ENV
+          fi
 
       - name: Expo prebuild (generate Android project)
         run: npx expo prebuild --platform android --clean --no-install
@@ -61,9 +85,9 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleRelease --no-daemon \
             -Pandroid.injected.signing.store.file=/tmp/purewallet.jks \
-            -Pandroid.injected.signing.store.password="${{ secrets.KEYSTORE_PASSWORD }}" \
-            -Pandroid.injected.signing.key.alias="${{ secrets.KEY_ALIAS }}" \
-            -Pandroid.injected.signing.key.password="${{ secrets.KEY_PASSWORD }}"
+            -Pandroid.injected.signing.store.password="$KS_PASS" \
+            -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$KEY_PASS"
         env:
           ANDROID_HOME: /usr/local/lib/android/sdk
           ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
@@ -82,4 +106,4 @@ jobs:
           retention-days: 30
 
       - name: Summary
-        run: echo "Signed Release APK ready — download from the Artifacts section above"
+        run: echo "Signed APK ready — download from the Artifacts section above"
