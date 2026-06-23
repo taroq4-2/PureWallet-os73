@@ -27,6 +27,14 @@ export interface MonthStats {
   byCategory: { categoryId: string; amount: number; count: number }[];
 }
 
+export interface SmsTransactionInput {
+  bankName: string;
+  amount: number;
+  merchantName: string;
+  timestamp: number;
+  smsId: string;
+}
+
 interface Ctx {
   transactions: StoredTransaction[];
   merchantMap: MerchantCategoryMap;
@@ -37,6 +45,7 @@ interface Ctx {
   categorize: (id: string, categoryId: string) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
   clearAllData: () => Promise<void>;
+  importSmsTransactions: (txs: SmsTransactionInput[]) => Promise<number>;
 }
 
 const TransactionsContext = createContext<Ctx | null>(null);
@@ -110,6 +119,44 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
     [enqueue],
   );
 
+  const importSmsTransactions = useCallback(
+    async (txs: SmsTransactionInput[]): Promise<number> => {
+      if (txs.length === 0) return 0;
+
+      return new Promise<number>((resolve) => {
+        setTransactions((prev) => {
+          const existingSmsIds = new Set(prev.map((t) => t.smsId).filter(Boolean));
+          const toAdd: StoredTransaction[] = [];
+
+          for (const tx of txs) {
+            if (existingSmsIds.has(tx.smsId)) continue;
+            const id = generateUUID();
+            const normalizedMerchant = normalizeMerchantName(tx.merchantName);
+            const categoryId = "uncategorized";
+            toAdd.push({
+              id,
+              normalizedMerchant,
+              categoryId,
+              isManual: false,
+              ...tx,
+            });
+          }
+
+          if (toAdd.length === 0) {
+            resolve(0);
+            return prev;
+          }
+
+          const next = [...toAdd, ...prev].sort((a, b) => b.timestamp - a.timestamp);
+          enqueue(() => saveTransactions(next));
+          resolve(toAdd.length);
+          return next;
+        });
+      });
+    },
+    [enqueue],
+  );
+
   const categorize = useCallback(
     async (id: string, categoryId: string) => {
       setTransactions((prev) => {
@@ -165,6 +212,7 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
         categorize,
         deleteTransaction,
         clearAllData,
+        importSmsTransactions,
       }}
     >
       {children}
