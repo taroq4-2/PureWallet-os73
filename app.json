@@ -25,7 +25,9 @@
       "package": "com.purewallet.app",
       "permissions": [
         "android.permission.USE_BIOMETRIC",
-        "android.permission.USE_FINGERPRINT"
+        "android.permission.USE_FINGERPRINT",
+        "android.permission.READ_SMS",
+        "android.permission.RECEIVE_SMS"
       ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
