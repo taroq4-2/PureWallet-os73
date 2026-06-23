@@ -14,13 +14,11 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
-        with:
-          version: "10"
-          run_install: false
+        # version is read from packageManager field in package.json
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
           cache: "pnpm"
 
       - name: Install dependencies
@@ -31,10 +29,10 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      # ── Signing keystore ───────────────────────────────────────────────────
-      # Production: add KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_PASSWORD,
-      #             KEY_ALIAS as GitHub Actions secrets in repo settings.
-      # CI testing: leave secrets unset — an auto-generated keystore is used.
+      # ── Signing keystore ────────────────────────────────────────────────────
+      # Production: set KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_PASSWORD,
+      #             KEY_ALIAS as GitHub Actions repository secrets.
+      # CI testing: leave all secrets unset — an auto keystore is generated.
       - name: Setup signing keystore
         run: |
           if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
@@ -44,7 +42,7 @@ jobs:
             echo "KEY_PASS=${{ secrets.KEY_PASSWORD }}"     >> $GITHUB_ENV
             echo "KEY_ALIAS=${{ secrets.KEY_ALIAS }}"       >> $GITHUB_ENV
           else
-            echo "Generating auto-signed keystore for CI"
+            echo "No keystore secret — generating auto-signed keystore for CI"
             AUTO_PASS=$(openssl rand -hex 24)
             keytool -genkeypair -v \
               -keystore /tmp/purewallet.jks \
@@ -85,6 +83,7 @@ jobs:
           APK=$(find android/app/build/outputs/apk/release -name "*.apk" | head -1)
           if [ -z "$APK" ]; then echo "❌ APK not found"; exit 1; fi
           cp "$APK" output/PureWallet-v2.0.0.apk
+          echo "APK_SIZE=$(du -h output/PureWallet-v2.0.0.apk | cut -f1)" >> $GITHUB_ENV
           ls -lh output/
 
       - name: Upload APK
@@ -97,5 +96,6 @@ jobs:
       - name: Summary
         run: |
           echo "## ✅ APK Build Successful" >> $GITHUB_STEP_SUMMARY
+          echo "**Size:** $APK_SIZE" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
           echo "Download **PureWallet-release-apk** from the Artifacts section above." >> $GITHUB_STEP_SUMMARY
-          ls -lh output/PureWallet-v2.0.0.apk >> $GITHUB_STEP_SUMMARY
