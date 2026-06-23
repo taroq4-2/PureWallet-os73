@@ -17,8 +17,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CategorySelector } from "@/components/CategorySelector";
 import { useTransactions } from "@/context/TransactionsContext";
 import { useColors } from "@/hooks/useColors";
-import { CATEGORIES, Category, getCategoryById } from "@/utils/categories";
 import { BANK_REGEX_TEMPLATES } from "@/utils/bankTemplates";
+import { CATEGORIES, Category, getCategoryById } from "@/utils/categories";
 
 export default function SettingsScreen() {
   const colors = useColors();
@@ -142,7 +142,7 @@ export default function SettingsScreen() {
         onPress={handleClear}
       >
         <Feather name="trash-2" size={18} color="#F43F5E" />
-        <Text style={[styles.dangerText]}>حذف جميع البيانات</Text>
+        <Text style={styles.dangerText}>حذف جميع البيانات</Text>
       </TouchableOpacity>
 
       <View style={[styles.aboutCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -171,22 +171,22 @@ export default function SettingsScreen() {
           <TextInput
             value={amount}
             onChangeText={setAmount}
-            keyboardType="numeric"
             placeholder="0.00"
             placeholderTextColor={colors.mutedForeground}
+            keyboardType="decimal-pad"
             style={[styles.input, { backgroundColor: colors.muted, color: colors.foreground, borderColor: colors.border }]}
           />
 
           <Text style={[styles.label, { color: colors.mutedForeground }]}>البنك</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
-            <View style={{ flexDirection: "row", gap: 8 }}>
+            <View style={{ flexDirection: "row", gap: 8, paddingHorizontal: 2 }}>
               {banks.map((b) => (
                 <TouchableOpacity
                   key={b}
-                  style={[styles.bankChip, { backgroundColor: bank === b ? colors.primary : colors.muted, borderColor: bank === b ? colors.primary : colors.border }]}
                   onPress={() => setBank(b)}
+                  style={[styles.bankChip, { backgroundColor: bank === b ? colors.primary : colors.muted, borderColor: bank === b ? colors.primary : colors.border }]}
                 >
-                  <Text style={{ color: bank === b ? "#fff" : colors.mutedForeground, fontSize: 12 }}>{b}</Text>
+                  <Text style={{ color: bank === b ? "#fff" : colors.mutedForeground, fontSize: 13 }}>{b}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -197,9 +197,9 @@ export default function SettingsScreen() {
             style={[styles.catBtn, { backgroundColor: selCategory.color + "22", borderColor: selCategory.color }]}
             onPress={() => setShowCatSel(true)}
           >
-            <Feather name={selCategory.icon as any} size={16} color={selCategory.color} />
+            <Feather name={selCategory.icon as any} size={18} color={selCategory.color} />
             <Text style={[styles.catBtnText, { color: selCategory.color }]}>{selCategory.nameAr}</Text>
-            <Feather name="chevron-down" size={14} color={selCategory.color} />
+            <Feather name="chevron-down" size={16} color={selCategory.color} />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -209,14 +209,14 @@ export default function SettingsScreen() {
             <Text style={styles.addBtnText}>إضافة العملية</Text>
           </TouchableOpacity>
         </View>
-
-        <CategorySelector
-          visible={showCatSel}
-          onClose={() => setShowCatSel(false)}
-          onSelect={(cat) => setSelCategory(cat)}
-          selectedId={selCategory.id}
-        />
       </Modal>
+
+      <CategorySelector
+        visible={showCatSel}
+        onClose={() => setShowCatSel(false)}
+        onSelect={(cat) => setSelCategory(cat)}
+        selectedId={selCategory.id}
+      />
     </ScrollView>
   );
 }
