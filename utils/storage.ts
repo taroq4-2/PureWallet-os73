@@ -1,62 +1,22 @@
-/**
- * Encrypted Storage Layer
- * ─────────────────────────────────────────────────────────────────────────
- * Uses expo-secure-store which is backed by:
- *   • iOS   → Keychain (hardware-encrypted when Secure Enclave available)
- *   • Android → Android Keystore System (AES-256-GCM)
- *
- * SecureStore has a ~2 KB per-item limit, so large payloads (transactions,
- * merchant map) are chunked into 1 800-byte slices before storage.
- */
-import * as SecureStore from "expo-secure-store";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const CHUNK_SIZE = 1_800;
+import { Mutex } from "./mutex";
+import { normalizeMerchantName } from "./validation";
 
 const KEYS = {
-  TRANSACTIONS: "pw_tx_v3",
-  MERCHANT_MAP: "pw_mm_v3",
+  TRANSACTIONS: "pw_transactions_v2",
+  MERCHANT_MAP: "pw_merchant_map_v2",
+  STATS_CACHE: "pw_stats_cache_v2",
 } as const;
 
-async function secureSet(key: string, value: string): Promise<void> {
-  const chunks: string[] = [];
-  for (let i = 0; i < value.length; i += CHUNK_SIZE) {
-    chunks.push(value.slice(i, i + CHUNK_SIZE));
-  }
-  await SecureStore.setItemAsync(`${key}__n`, String(chunks.length));
-  await Promise.all(
-    chunks.map((chunk, i) => SecureStore.setItemAsync(`${key}__${i}`, chunk)),
-  );
-}
-
-async function secureGet(key: string): Promise<string | null> {
-  const countStr = await SecureStore.getItemAsync(`${key}__n`);
-  if (!countStr) return null;
-  const count = parseInt(countStr, 10);
-  const parts = await Promise.all(
-    Array.from({ length: count }, (_, i) =>
-      SecureStore.getItemAsync(`${key}__${i}`),
-    ),
-  );
-  if (parts.some((p) => p === null)) return null;
-  return (parts as string[]).join("");
-}
-
-async function secureDelete(key: string): Promise<void> {
-  const countStr = await SecureStore.getItemAsync(`${key}__n`);
-  const count = countStr ? parseInt(countStr, 10) : 0;
-  await SecureStore.deleteItemAsync(`${key}__n`);
-  await Promise.all(
-    Array.from({ length: count }, (_, i) =>
-      SecureStore.deleteItemAsync(`${key}__${i}`),
-    ),
-  );
-}
+const writeMutex = new Mutex();
 
 export interface StoredTransaction {
   id: string;
   bankName: string;
   amount: number;
   merchantName: string;
+  normalizedMerchant: string;
   timestamp: number;
   categoryId: string;
   isManual: boolean;
@@ -64,35 +24,83 @@ export interface StoredTransaction {
 
 export type MerchantCategoryMap = Record<string, string>;
 
+export interface StatsCache {
+  data: string;
+  updatedAt: number;
+  monthKey: string;
+}
+
+function getCurrentMonthKey(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
 export async function loadTransactions(): Promise<StoredTransaction[]> {
   try {
-    const raw = await secureGet(KEYS.TRANSACTIONS);
-    return raw ? (JSON.parse(raw) as StoredTransaction[]) : [];
+    const raw = await AsyncStorage.getItem(KEYS.TRANSACTIONS);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as StoredTransaction[];
+    return parsed.map((t) => ({
+      ...t,
+      normalizedMerchant: t.normalizedMerchant ?? normalizeMerchantName(t.merchantName),
+      isManual: t.isManual ?? false,
+    }));
   } catch {
     return [];
   }
 }
 
 export async function saveTransactions(items: StoredTransaction[]): Promise<void> {
-  await secureSet(KEYS.TRANSACTIONS, JSON.stringify(items));
+  await writeMutex.run(async () => {
+    await AsyncStorage.setItem(KEYS.TRANSACTIONS, JSON.stringify(items));
+  });
 }
 
 export async function loadMerchantMap(): Promise<MerchantCategoryMap> {
   try {
-    const raw = await secureGet(KEYS.MERCHANT_MAP);
-    return raw ? (JSON.parse(raw) as MerchantCategoryMap) : {};
+    const raw = await AsyncStorage.getItem(KEYS.MERCHANT_MAP);
+    if (!raw) return {};
+    return JSON.parse(raw) as MerchantCategoryMap;
   } catch {
     return {};
   }
 }
 
 export async function saveMerchantMap(map: MerchantCategoryMap): Promise<void> {
-  await secureSet(KEYS.MERCHANT_MAP, JSON.stringify(map));
+  await writeMutex.run(async () => {
+    await AsyncStorage.setItem(KEYS.MERCHANT_MAP, JSON.stringify(map));
+  });
+}
+
+export async function loadStatsCache(): Promise<StatsCache | null> {
+  try {
+    const raw = await AsyncStorage.getItem(KEYS.STATS_CACHE);
+    if (!raw) return null;
+    const cache = JSON.parse(raw) as StatsCache;
+    const currentMonth = getCurrentMonthKey();
+    if (cache.monthKey !== currentMonth) return null;
+    if (Date.now() - cache.updatedAt > 5 * 60 * 1000) return null;
+    return cache;
+  } catch {
+    return null;
+  }
+}
+
+export async function saveStatsCache(data: string): Promise<void> {
+  const cache: StatsCache = {
+    data,
+    updatedAt: Date.now(),
+    monthKey: getCurrentMonthKey(),
+  };
+  await AsyncStorage.setItem(KEYS.STATS_CACHE, JSON.stringify(cache));
 }
 
 export async function clearAll(): Promise<void> {
-  await Promise.all([
-    secureDelete(KEYS.TRANSACTIONS),
-    secureDelete(KEYS.MERCHANT_MAP),
-  ]);
+  await writeMutex.run(async () => {
+    await AsyncStorage.multiRemove([
+      KEYS.TRANSACTIONS,
+      KEYS.MERCHANT_MAP,
+      KEYS.STATS_CACHE,
+    ]);
+  });
 }

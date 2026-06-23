@@ -5,7 +5,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { useColors } from "@/hooks/useColors";
 
 interface Props {
-  icon: string;
+  icon: keyof typeof Feather.glyphMap;
   title: string;
   subtitle?: string;
 }
@@ -15,12 +15,12 @@ export function EmptyState({ icon, title, subtitle }: Props) {
   return (
     <View style={styles.container}>
       <View style={[styles.iconWrap, { backgroundColor: colors.muted }]}>
-        <Feather name={icon as any} size={28} color={colors.mutedForeground} />
+        <Feather name={icon} size={28} color={colors.mutedForeground} />
       </View>
       <Text style={[styles.title, { color: colors.foreground }]}>{title}</Text>
-      {subtitle ? (
+      {subtitle && (
         <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>{subtitle}</Text>
-      ) : null}
+      )}
     </View>
   );
 }
@@ -29,25 +29,26 @@ const styles = StyleSheet.create({
   container: {
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 48,
-    gap: 12,
+    paddingVertical: 40,
+    gap: 10,
   },
   iconWrap: {
-    width: 64,
-    height: 64,
+    width: 60,
+    height: 60,
     borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
+    marginBottom: 4,
   },
   title: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: "600",
     textAlign: "center",
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 13,
     textAlign: "center",
-    paddingHorizontal: 32,
-    lineHeight: 20,
+    maxWidth: 260,
+    lineHeight: 19,
   },
 });

@@ -1,5 +1,5 @@
 import { Feather } from "@expo/vector-icons";
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   FlatList,
   Platform,
@@ -20,15 +20,18 @@ import { useColors } from "@/hooks/useColors";
 import { CATEGORIES, Category, getCategoryById } from "@/utils/categories";
 import { StoredTransaction } from "@/utils/storage";
 
+const PAGE_SIZE = 20;
+
 export default function TransactionsScreen() {
-  const colors  = useColors();
-  const insets  = useSafeAreaInsets();
+  const colors = useColors();
+  const insets = useSafeAreaInsets();
   const { transactions, categorize, deleteTransaction } = useTransactions();
 
-  const [query,      setQuery]      = useState("");
-  const [filterCat,  setFilterCat]  = useState<string>("all");
+  const [query, setQuery] = useState("");
+  const [filterCat, setFilterCat] = useState<string>("all");
   const [editTarget, setEditTarget] = useState<StoredTransaction | null>(null);
   const [showCatSel, setShowCatSel] = useState(false);
+  const [page, setPage] = useState(1);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
@@ -39,7 +42,8 @@ export default function TransactionsScreen() {
       list = list.filter(
         (t) =>
           t.merchantName.toLowerCase().includes(q) ||
-          t.bankName.toLowerCase().includes(q),
+          t.bankName.toLowerCase().includes(q) ||
+          t.normalizedMerchant.includes(q),
       );
     }
     if (filterCat !== "all") {
@@ -48,21 +52,37 @@ export default function TransactionsScreen() {
     return list;
   }, [transactions, query, filterCat]);
 
+  const displayed = useMemo(() => filtered.slice(0, page * PAGE_SIZE), [filtered, page]);
+
   const totalFiltered = useMemo(
     () => filtered.reduce((s, t) => s + t.amount, 0),
     [filtered],
   );
 
-  const handleEdit = (tx: StoredTransaction) => {
+  const handleEdit = useCallback((tx: StoredTransaction) => {
     setEditTarget(tx);
     setShowCatSel(true);
-  };
+  }, []);
 
-  const handleSelect = async (cat: Category) => {
-    if (!editTarget) return;
-    await categorize(editTarget.id, cat.id);
-    setEditTarget(null);
-  };
+  const handleSelect = useCallback(
+    async (cat: Category) => {
+      if (!editTarget) return;
+      await categorize(editTarget.id, cat.id);
+      setEditTarget(null);
+    },
+    [editTarget, categorize],
+  );
+
+  const handleLoadMore = useCallback(() => {
+    if (displayed.length < filtered.length) {
+      setPage((p) => p + 1);
+    }
+  }, [displayed.length, filtered.length]);
+
+  const handleFilterChange = useCallback((id: string) => {
+    setFilterCat(id);
+    setPage(1);
+  }, []);
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
@@ -77,7 +97,7 @@ export default function TransactionsScreen() {
         <Feather name="search" size={16} color={colors.mutedForeground} />
         <TextInput
           value={query}
-          onChangeText={setQuery}
+          onChangeText={(t) => { setQuery(t); setPage(1); }}
           placeholder="ابحث عن متجر أو بنك..."
           placeholderTextColor={colors.mutedForeground}
           style={[styles.searchInput, { color: colors.foreground }]}
@@ -103,22 +123,13 @@ export default function TransactionsScreen() {
               style={[
                 styles.chip,
                 {
-                  backgroundColor: active
-                    ? (cat?.color ?? colors.primary)
-                    : colors.card,
-                  borderColor: active
-                    ? (cat?.color ?? colors.primary)
-                    : colors.border,
+                  backgroundColor: active ? (cat?.color ?? colors.primary) : colors.card,
+                  borderColor: active ? (cat?.color ?? colors.primary) : colors.border,
                 },
               ]}
-              onPress={() => setFilterCat(c.id)}
+              onPress={() => handleFilterChange(c.id)}
             >
-              <Text
-                style={[
-                  styles.chipText,
-                  { color: active ? "#fff" : colors.mutedForeground },
-                ]}
-              >
+              <Text style={[styles.chipText, { color: active ? "#fff" : colors.mutedForeground }]}>
                 {c.nameAr}
               </Text>
             </TouchableOpacity>
@@ -127,7 +138,7 @@ export default function TransactionsScreen() {
       </ScrollView>
 
       <FlatList
-        data={filtered}
+        data={displayed}
         keyExtractor={(t) => t.id}
         contentContainerStyle={[
           styles.list,
@@ -147,7 +158,20 @@ export default function TransactionsScreen() {
             subtitle={query ? "جرب كلمة بحث مختلفة" : "ستظهر عملياتك هنا"}
           />
         }
+        ListFooterComponent={
+          displayed.length < filtered.length ? (
+            <TouchableOpacity
+              style={[styles.loadMoreBtn, { borderColor: colors.border }]}
+              onPress={handleLoadMore}
+            >
+              <Text style={[styles.loadMoreText, { color: colors.primary }]}>
+                تحميل المزيد ({filtered.length - displayed.length})
+              </Text>
+            </TouchableOpacity>
+          ) : null
+        }
         showsVerticalScrollIndicator={false}
+        scrollEnabled={!!displayed.length}
       />
 
       <CategorySelector
@@ -162,26 +186,9 @@ export default function TransactionsScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingBottom: 12,
-    gap: 10,
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: "800",
-    letterSpacing: -0.5,
-    flex: 1,
-  },
-  totalChip: {
-    fontSize: 14,
-    fontWeight: "700",
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 20,
-  },
+  header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingBottom: 12, gap: 10 },
+  headerTitle: { fontSize: 28, fontWeight: "800", letterSpacing: -0.5, flex: 1 },
+  totalChip: { fontSize: 14, fontWeight: "700", paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20 },
   searchRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -193,22 +200,18 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 12,
   },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    textAlign: "right",
-  },
-  filters: {
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    gap: 8,
-  },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
-    borderWidth: 1,
-  },
+  searchInput: { flex: 1, fontSize: 14, textAlign: "right" },
+  filters: { paddingHorizontal: 16, paddingBottom: 12, gap: 8 },
+  chip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1 },
   chipText: { fontSize: 13, fontWeight: "500" },
   list: { paddingHorizontal: 16, paddingTop: 4 },
+  loadMoreBtn: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: "center",
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  loadMoreText: { fontSize: 14, fontWeight: "600" },
 });

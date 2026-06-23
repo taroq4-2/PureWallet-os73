@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 import { useColors } from "@/hooks/useColors";
 import { getCategoryById } from "@/utils/categories";
@@ -16,21 +16,33 @@ interface Props {
 }
 
 function formatDate(ts: number): string {
-  const d   = new Date(ts);
+  const d = new Date(ts);
   const now = new Date();
   const diff = Math.floor((now.getTime() - ts) / 86_400_000);
   if (diff === 0) return "اليوم";
   if (diff === 1) return "أمس";
-  if (diff < 7)  return `منذ ${diff} أيام`;
+  if (diff < 7) return `منذ ${diff} أيام`;
   return d.toLocaleDateString("ar-SA", { day: "numeric", month: "short" });
 }
 
-export function TransactionCard({ transaction, onPress, onDelete, showCategoryAction, onCategorize }: Props) {
-  const colors   = useColors();
+function maskAmount(amount: number): string {
+  return amount.toFixed(2);
+}
+
+export function TransactionCard({
+  transaction,
+  onPress,
+  onDelete,
+  showCategoryAction,
+  onCategorize,
+}: Props) {
+  const colors = useColors();
   const category = getCategoryById(transaction.categoryId);
 
   const handleDelete = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
     onDelete?.();
   };
 
@@ -51,13 +63,15 @@ export function TransactionCard({ transaction, onPress, onDelete, showCategoryAc
         <View style={styles.meta}>
           <Text style={[styles.bank, { color: colors.mutedForeground }]}>{transaction.bankName}</Text>
           <View style={[styles.dot, { backgroundColor: colors.mutedForeground }]} />
-          <Text style={[styles.date, { color: colors.mutedForeground }]}>{formatDate(transaction.timestamp)}</Text>
+          <Text style={[styles.date, { color: colors.mutedForeground }]}>
+            {formatDate(transaction.timestamp)}
+          </Text>
         </View>
       </View>
 
       <View style={styles.right}>
         <Text style={[styles.amount, { color: colors.negative }]}>
-          {transaction.amount.toFixed(2)} ر.س
+          {maskAmount(transaction.amount)} ر.س
         </Text>
         {showCategoryAction ? (
           <TouchableOpacity
@@ -69,7 +83,10 @@ export function TransactionCard({ transaction, onPress, onDelete, showCategoryAc
           </TouchableOpacity>
         ) : (
           onDelete && (
-            <TouchableOpacity onPress={handleDelete} hitSlop={{ top: 8, bottom: 8, left: 12, right: 0 }}>
+            <TouchableOpacity
+              onPress={handleDelete}
+              hitSlop={{ top: 8, bottom: 8, left: 12, right: 0 }}
+            >
               <Feather name="trash-2" size={15} color={colors.mutedForeground} />
             </TouchableOpacity>
           )
@@ -96,37 +113,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  middle: {
-    flex: 1,
-    gap: 4,
-  },
-  merchant: {
-    fontSize: 15,
-    fontWeight: "600",
-  },
-  meta: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-  },
+  middle: { flex: 1, gap: 4 },
+  merchant: { fontSize: 15, fontWeight: "600" },
+  meta: { flexDirection: "row", alignItems: "center", gap: 5 },
   bank: { fontSize: 12 },
   dot: { width: 3, height: 3, borderRadius: 2 },
   date: { fontSize: 12 },
-  right: {
-    alignItems: "flex-end",
-    gap: 6,
-  },
-  amount: {
-    fontSize: 15,
-    fontWeight: "700",
-  },
-  classifyBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  classifyText: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
+  right: { alignItems: "flex-end", gap: 6 },
+  amount: { fontSize: 15, fontWeight: "700" },
+  classifyBtn: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+  classifyText: { fontSize: 12, fontWeight: "600" },
 });

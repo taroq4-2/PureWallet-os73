@@ -1,0 +1,27 @@
+kind = "mobile"
+previewPath = "/"
+title = "PureWallet"
+version = "1.0.0"
+id = "artifacts/pure-wallet"
+router = "expo-domain"
+
+[[integratedSkills]]
+name = "expo"
+version = "1.0.0"
+
+[[services]]
+ensurePreviewReachable = "/status"
+name = "expo"
+paths = [ "/" ]
+localPort = 22475
+
+[services.development]
+run = "pnpm --filter @workspace/pure-wallet run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/pure-wallet", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/pure-wallet", "run", "serve" ]
+
+[services.env]
+PORT = "22475"
+BASE_PATH = "/"

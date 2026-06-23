@@ -16,17 +16,23 @@ interface Props {
   centerLabel?: string;
 }
 
-export function DonutChart({ segments, size = 160, strokeWidth = 22, centerValue, centerLabel }: Props) {
-  const radius         = (size - strokeWidth) / 2;
-  const circumference  = 2 * Math.PI * radius;
-  const center         = size / 2;
-  const total          = segments.reduce((s, seg) => s + seg.value, 0);
+export function DonutChart({
+  segments,
+  size = 160,
+  strokeWidth = 22,
+  centerValue,
+  centerLabel,
+}: Props) {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const center = size / 2;
+  const total = segments.reduce((s, seg) => s + seg.value, 0);
 
   let cumulativePct = 0;
 
   const rings = segments.map((seg, i) => {
-    const pct   = total > 0 ? seg.value / total : 0;
-    const dash  = circumference * pct;
+    const pct = total > 0 ? seg.value / total : 0;
+    const dash = circumference * pct;
     const start = cumulativePct * 360 - 90;
     cumulativePct += pct;
     return (
@@ -48,16 +54,19 @@ export function DonutChart({ segments, size = 160, strokeWidth = 22, centerValue
   return (
     <View style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }}>
       <Svg width={size} height={size} style={StyleSheet.absoluteFill}>
-        <Circle cx={center} cy={center} r={radius} fill="none" stroke="#1E2A3A" strokeWidth={strokeWidth} />
+        <Circle
+          cx={center}
+          cy={center}
+          r={radius}
+          fill="none"
+          stroke="#1E2A3A"
+          strokeWidth={strokeWidth}
+        />
         {rings}
       </Svg>
       <View style={{ alignItems: "center" }}>
-        {centerValue ? (
-          <Text style={styles.centerValue}>{centerValue}</Text>
-        ) : null}
-        {centerLabel ? (
-          <Text style={styles.centerLabel}>{centerLabel}</Text>
-        ) : null}
+        {centerValue ? <Text style={styles.centerValue}>{centerValue}</Text> : null}
+        {centerLabel ? <Text style={styles.centerLabel}>{centerLabel}</Text> : null}
       </View>
     </View>
   );

@@ -4,6 +4,7 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -16,6 +17,8 @@ import {
   saveMerchantMap,
   saveTransactions,
 } from "@/utils/storage";
+import { normalizeMerchantName } from "@/utils/validation";
+import { generateUUID } from "@/utils/uuid";
 
 export interface MonthStats {
   total: number;
@@ -30,7 +33,7 @@ interface Ctx {
   loading: boolean;
   uncategorizedCount: number;
   monthStats: MonthStats;
-  addTransaction: (t: Omit<StoredTransaction, "id">) => Promise<void>;
+  addTransaction: (t: Omit<StoredTransaction, "id" | "normalizedMerchant">) => Promise<void>;
   categorize: (id: string, categoryId: string) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
   clearAllData: () => Promise<void>;
@@ -41,18 +44,18 @@ const TransactionsContext = createContext<Ctx | null>(null);
 function getMonthRange(offset = 0) {
   const now = new Date();
   const start = new Date(now.getFullYear(), now.getMonth() + offset, 1).getTime();
-  const end   = new Date(now.getFullYear(), now.getMonth() + offset + 1, 0, 23, 59, 59).getTime();
+  const end = new Date(now.getFullYear(), now.getMonth() + offset + 1, 0, 23, 59, 59).getTime();
   return { start, end };
 }
 
 function computeMonthStats(transactions: StoredTransaction[]): MonthStats {
-  const cur  = getMonthRange(0);
+  const cur = getMonthRange(0);
   const prev = getMonthRange(-1);
 
-  const curTx  = transactions.filter((t) => t.timestamp >= cur.start  && t.timestamp <= cur.end);
+  const curTx = transactions.filter((t) => t.timestamp >= cur.start && t.timestamp <= cur.end);
   const prevTx = transactions.filter((t) => t.timestamp >= prev.start && t.timestamp <= prev.end);
 
-  const total         = curTx.reduce((s, t) => s + t.amount, 0);
+  const total = curTx.reduce((s, t) => s + t.amount, 0);
   const previousTotal = prevTx.reduce((s, t) => s + t.amount, 0);
   const changePercent = previousTotal > 0 ? ((total - previousTotal) / previousTotal) * 100 : 0;
 
@@ -61,7 +64,7 @@ function computeMonthStats(transactions: StoredTransaction[]): MonthStats {
     if (t.categoryId === "uncategorized") continue;
     if (!map[t.categoryId]) map[t.categoryId] = { amount: 0, count: 0 };
     map[t.categoryId].amount += t.amount;
-    map[t.categoryId].count  += 1;
+    map[t.categoryId].count += 1;
   }
 
   const byCategory = Object.entries(map)
@@ -73,48 +76,69 @@ function computeMonthStats(transactions: StoredTransaction[]): MonthStats {
 
 export function TransactionsProvider({ children }: { children: React.ReactNode }) {
   const [transactions, setTransactions] = useState<StoredTransaction[]>([]);
-  const [merchantMap, setMerchantMap]   = useState<MerchantCategoryMap>({});
-  const [loading, setLoading]           = useState(true);
+  const [merchantMap, setMerchantMap] = useState<MerchantCategoryMap>({});
+  const [loading, setLoading] = useState(true);
+
+  const pendingRef = useRef<Promise<void>>(Promise.resolve());
 
   useEffect(() => {
     (async () => {
-      const [stored, map] = await Promise.all([
-        loadTransactions(),
-        loadMerchantMap(),
-      ]);
+      const [stored, map] = await Promise.all([loadTransactions(), loadMerchantMap()]);
       setTransactions(stored);
       setMerchantMap(map);
       setLoading(false);
     })();
   }, []);
 
-  const persist = useCallback(async (items: StoredTransaction[], map?: MerchantCategoryMap) => {
-    await saveTransactions(items);
-    if (map) await saveMerchantMap(map);
+  const enqueue = useCallback((fn: () => Promise<void>) => {
+    pendingRef.current = pendingRef.current.then(fn).catch(() => {});
+    return pendingRef.current;
   }, []);
 
-  const addTransaction = useCallback(async (t: Omit<StoredTransaction, "id">) => {
-    const id = Date.now().toString() + Math.random().toString(36).substring(2, 7);
-    const next = [{ ...t, id }, ...transactions];
-    setTransactions(next);
-    await persist(next);
-  }, [transactions, persist]);
+  const addTransaction = useCallback(
+    async (t: Omit<StoredTransaction, "id" | "normalizedMerchant">) => {
+      const id = generateUUID();
+      const normalizedMerchant = normalizeMerchantName(t.merchantName);
+      const newTx: StoredTransaction = { ...t, id, normalizedMerchant };
 
-  const categorize = useCallback(async (id: string, categoryId: string) => {
-    const next = transactions.map((t) => (t.id === id ? { ...t, categoryId } : t));
-    const tx = next.find((t) => t.id === id);
-    const newMap = { ...merchantMap };
-    if (tx) newMap[tx.merchantName] = categoryId;
-    setTransactions(next);
-    setMerchantMap(newMap);
-    await persist(next, newMap);
-  }, [transactions, merchantMap, persist]);
+      setTransactions((prev) => {
+        const next = [newTx, ...prev];
+        enqueue(() => saveTransactions(next));
+        return next;
+      });
+    },
+    [enqueue],
+  );
 
-  const deleteTransaction = useCallback(async (id: string) => {
-    const next = transactions.filter((t) => t.id !== id);
-    setTransactions(next);
-    await persist(next);
-  }, [transactions, persist]);
+  const categorize = useCallback(
+    async (id: string, categoryId: string) => {
+      setTransactions((prev) => {
+        const next = prev.map((t) => (t.id === id ? { ...t, categoryId } : t));
+        const tx = next.find((t) => t.id === id);
+
+        setMerchantMap((prevMap) => {
+          if (!tx) return prevMap;
+          const newMap = { ...prevMap, [tx.normalizedMerchant]: categoryId };
+          enqueue(() => Promise.all([saveTransactions(next), saveMerchantMap(newMap)]).then(() => {}));
+          return newMap;
+        });
+
+        return next;
+      });
+    },
+    [enqueue],
+  );
+
+  const deleteTransaction = useCallback(
+    async (id: string) => {
+      setTransactions((prev) => {
+        const next = prev.filter((t) => t.id !== id);
+        enqueue(() => saveTransactions(next));
+        return next;
+      });
+    },
+    [enqueue],
+  );
 
   const clearAllData = useCallback(async () => {
     await clearAll();
@@ -131,7 +155,17 @@ export function TransactionsProvider({ children }: { children: React.ReactNode }
 
   return (
     <TransactionsContext.Provider
-      value={{ transactions, merchantMap, loading, uncategorizedCount, monthStats, addTransaction, categorize, deleteTransaction, clearAllData }}
+      value={{
+        transactions,
+        merchantMap,
+        loading,
+        uncategorizedCount,
+        monthStats,
+        addTransaction,
+        categorize,
+        deleteTransaction,
+        clearAllData,
+      }}
     >
       {children}
     </TransactionsContext.Provider>

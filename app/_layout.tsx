@@ -14,12 +14,20 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { LockScreen } from "@/components/LockScreen";
+import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { TransactionsProvider } from "@/context/TransactionsContext";
 
 SplashScreen.preventAutoHideAsync();
 SystemUI.setBackgroundColorAsync("#0A0E1A");
 
 const queryClient = new QueryClient();
+
+function AppGate({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated } = useAuth();
+  if (!isAuthenticated) return <LockScreen />;
+  return <>{children}</>;
+}
 
 function RootLayoutNav() {
   return (
@@ -48,13 +56,17 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
-          <TransactionsProvider>
-            <GestureHandlerRootView style={{ flex: 1 }}>
-              <KeyboardProvider>
-                <RootLayoutNav />
-              </KeyboardProvider>
-            </GestureHandlerRootView>
-          </TransactionsProvider>
+          <AuthProvider>
+            <TransactionsProvider>
+              <GestureHandlerRootView style={{ flex: 1 }}>
+                <KeyboardProvider>
+                  <AppGate>
+                    <RootLayoutNav />
+                  </AppGate>
+                </KeyboardProvider>
+              </GestureHandlerRootView>
+            </TransactionsProvider>
+          </AuthProvider>
         </QueryClientProvider>
       </ErrorBoundary>
     </SafeAreaProvider>

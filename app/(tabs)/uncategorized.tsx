@@ -1,11 +1,5 @@
-import React, { useState } from "react";
-import {
-  FlatList,
-  StyleSheet,
-  Text,
-  View,
-  Platform,
-} from "react-native";
+import React, { useCallback, useState } from "react";
+import { FlatList, Platform, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CategorySelector } from "@/components/CategorySelector";
@@ -26,16 +20,19 @@ export default function UncategorizedScreen() {
 
   const uncategorized = transactions.filter((t) => t.categoryId === "uncategorized");
 
-  const handleCategorize = (tx: StoredTransaction) => {
+  const handleCategorize = useCallback((tx: StoredTransaction) => {
     setSelected(tx);
     setShowSelector(true);
-  };
+  }, []);
 
-  const handleSelect = async (cat: Category) => {
-    if (!selected) return;
-    await categorize(selected.id, cat.id);
-    setSelected(null);
-  };
+  const handleSelect = useCallback(
+    async (cat: Category) => {
+      if (!selected) return;
+      await categorize(selected.id, cat.id);
+      setSelected(null);
+    },
+    [selected, categorize],
+  );
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
@@ -78,6 +75,7 @@ export default function UncategorizedScreen() {
           />
         }
         showsVerticalScrollIndicator={false}
+        scrollEnabled={!!uncategorized.length}
       />
 
       <CategorySelector
@@ -92,38 +90,10 @@ export default function UncategorizedScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingBottom: 8,
-    gap: 10,
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: "800",
-    letterSpacing: -0.5,
-  },
-  badge: {
-    minWidth: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 6,
-  },
-  badgeText: {
-    color: "#fff",
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  subtitle: {
-    fontSize: 14,
-    paddingHorizontal: 20,
-    marginBottom: 12,
-  },
-  list: {
-    paddingHorizontal: 16,
-    paddingTop: 4,
-  },
+  header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingBottom: 8, gap: 10 },
+  headerTitle: { fontSize: 28, fontWeight: "800", letterSpacing: -0.5 },
+  badge: { minWidth: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center", paddingHorizontal: 6 },
+  badgeText: { color: "#fff", fontSize: 13, fontWeight: "700" },
+  subtitle: { fontSize: 14, paddingHorizontal: 20, marginBottom: 12 },
+  list: { paddingHorizontal: 16, paddingTop: 4 },
 });

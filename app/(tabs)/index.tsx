@@ -1,12 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import React, { useMemo } from "react";
-import {
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { DonutChart, DonutSegment } from "@/components/DonutChart";
@@ -27,7 +21,7 @@ export default function DashboardScreen() {
   const { transactions, monthStats, loading } = useTransactions();
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
-  const month  = MONTH_NAMES_AR[new Date().getMonth()];
+  const month = MONTH_NAMES_AR[new Date().getMonth()];
 
   const recent = useMemo(
     () => [...transactions].sort((a, b) => b.timestamp - a.timestamp).slice(0, 5),
@@ -36,15 +30,14 @@ export default function DashboardScreen() {
 
   const segments = useMemo<DonutSegment[]>(() => {
     if (monthStats.byCategory.length === 0) return [];
-    const top = monthStats.byCategory.slice(0, 6);
-    return top.map((bc) => {
+    return monthStats.byCategory.slice(0, 6).map((bc) => {
       const cat = getCategoryById(bc.categoryId);
       return { value: bc.amount, color: cat.color, label: cat.nameAr };
     });
   }, [monthStats]);
 
   const changeAbsolute = monthStats.total - monthStats.previousTotal;
-  const isIncrease     = changeAbsolute >= 0;
+  const isIncrease = changeAbsolute >= 0;
 
   if (loading) {
     return (
@@ -86,12 +79,7 @@ export default function DashboardScreen() {
                   size={13}
                   color={isIncrease ? colors.negative : colors.positive}
                 />
-                <Text
-                  style={[
-                    styles.changeText,
-                    { color: isIncrease ? colors.negative : colors.positive },
-                  ]}
-                >
+                <Text style={[styles.changeText, { color: isIncrease ? colors.negative : colors.positive }]}>
                   {Math.abs(monthStats.changePercent).toFixed(1)}% عن الشهر الماضي
                 </Text>
               </View>
@@ -134,8 +122,8 @@ export default function DashboardScreen() {
         <View style={[styles.barsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.sectionLabel, { color: colors.foreground }]}>توزيع المصروفات</Text>
           {monthStats.byCategory.slice(0, 5).map((bc) => {
-            const cat  = getCategoryById(bc.categoryId);
-            const pct  = monthStats.total > 0 ? (bc.amount / monthStats.total) * 100 : 0;
+            const cat = getCategoryById(bc.categoryId);
+            const pct = monthStats.total > 0 ? (bc.amount / monthStats.total) * 100 : 0;
             return (
               <View key={bc.categoryId} style={styles.barRow}>
                 <Text style={[styles.barLabel, { color: colors.mutedForeground }]}>{cat.nameAr}</Text>
@@ -160,9 +148,7 @@ export default function DashboardScreen() {
         {recent.length === 0 ? (
           <EmptyState icon="activity" title="لا توجد عمليات بعد" subtitle="أضف عملية يدوياً من الإعدادات" />
         ) : (
-          recent.map((t) => (
-            <TransactionCard key={t.id} transaction={t} />
-          ))
+          recent.map((t) => <TransactionCard key={t.id} transaction={t} />)
         )}
       </View>
     </ScrollView>
@@ -170,35 +156,35 @@ export default function DashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen:        { flex: 1 },
-  center:        { alignItems: "center", justifyContent: "center" },
-  loadingText:   { fontSize: 16 },
-  header:        { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", paddingHorizontal: 20, paddingBottom: 16 },
-  greeting:      { fontSize: 13, marginBottom: 2 },
-  appName:       { fontSize: 28, fontWeight: "800", letterSpacing: -0.5 },
-  monthBadge:    { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20 },
-  monthText:     { fontSize: 13, fontWeight: "600" },
-  summaryCard:   { marginHorizontal: 16, borderRadius: 20, borderWidth: 1, padding: 18, marginBottom: 12 },
-  summaryTop:    { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  summaryLeft:   { flex: 1, gap: 6 },
-  summaryLabel:  { fontSize: 13 },
+  screen: { flex: 1 },
+  center: { alignItems: "center", justifyContent: "center" },
+  loadingText: { fontSize: 16 },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", paddingHorizontal: 20, paddingBottom: 16 },
+  greeting: { fontSize: 13, marginBottom: 2 },
+  appName: { fontSize: 28, fontWeight: "800", letterSpacing: -0.5 },
+  monthBadge: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20 },
+  monthText: { fontSize: 13, fontWeight: "600" },
+  summaryCard: { marginHorizontal: 16, borderRadius: 20, borderWidth: 1, padding: 18, marginBottom: 12 },
+  summaryTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  summaryLeft: { flex: 1, gap: 6 },
+  summaryLabel: { fontSize: 13 },
   summaryAmount: { fontSize: 32, fontWeight: "800", letterSpacing: -1 },
   currencyLabel: { fontSize: 16, fontWeight: "400", letterSpacing: 0 },
-  changeRow:     { flexDirection: "row", alignItems: "center", gap: 5 },
-  changeText:    { fontSize: 12, fontWeight: "500" },
-  emptyChart:    { width: 140, height: 140, alignItems: "center", justifyContent: "center" },
-  legend:        { marginTop: 16, gap: 8 },
-  legendItem:    { flexDirection: "row", alignItems: "center", gap: 8 },
-  legendDot:     { width: 8, height: 8, borderRadius: 4 },
-  legendLabel:   { flex: 1, fontSize: 13 },
-  legendAmount:  { fontSize: 13, fontWeight: "600" },
-  barsCard:      { marginHorizontal: 16, borderRadius: 20, borderWidth: 1, padding: 18, marginBottom: 12, gap: 12 },
-  sectionLabel:  { fontSize: 16, fontWeight: "700", marginBottom: 4 },
-  barRow:        { flexDirection: "row", alignItems: "center", gap: 10 },
-  barLabel:      { width: 70, fontSize: 12, textAlign: "right" },
-  barTrack:      { flex: 1, height: 8, borderRadius: 4, overflow: "hidden" },
-  barFill:       { height: "100%", borderRadius: 4 },
-  barPct:        { width: 36, fontSize: 12, fontWeight: "600", textAlign: "right" },
-  recentTitle:   { fontSize: 18, fontWeight: "700", paddingHorizontal: 20, marginBottom: 10, marginTop: 4 },
-  recentList:    { paddingHorizontal: 16 },
+  changeRow: { flexDirection: "row", alignItems: "center", gap: 5 },
+  changeText: { fontSize: 12, fontWeight: "500" },
+  emptyChart: { width: 140, height: 140, alignItems: "center", justifyContent: "center" },
+  legend: { marginTop: 16, gap: 8 },
+  legendItem: { flexDirection: "row", alignItems: "center", gap: 8 },
+  legendDot: { width: 8, height: 8, borderRadius: 4 },
+  legendLabel: { flex: 1, fontSize: 13 },
+  legendAmount: { fontSize: 13, fontWeight: "600" },
+  barsCard: { marginHorizontal: 16, borderRadius: 20, borderWidth: 1, padding: 18, marginBottom: 12, gap: 12 },
+  sectionLabel: { fontSize: 16, fontWeight: "700", marginBottom: 4 },
+  barRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  barLabel: { width: 70, fontSize: 12, textAlign: "right" },
+  barTrack: { flex: 1, height: 8, borderRadius: 4, overflow: "hidden" },
+  barFill: { height: "100%", borderRadius: 4 },
+  barPct: { width: 36, fontSize: 12, fontWeight: "600", textAlign: "right" },
+  recentTitle: { fontSize: 18, fontWeight: "700", paddingHorizontal: 20, marginBottom: 10, marginTop: 4 },
+  recentList: { paddingHorizontal: 16 },
 });

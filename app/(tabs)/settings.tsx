@@ -7,6 +7,7 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -15,32 +16,51 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CategorySelector } from "@/components/CategorySelector";
+import { PinPad } from "@/components/PinPad";
+import { useAuth } from "@/context/AuthContext";
 import { useTransactions } from "@/context/TransactionsContext";
 import { useColors } from "@/hooks/useColors";
 import { BANK_REGEX_TEMPLATES } from "@/utils/bankTemplates";
 import { CATEGORIES, Category, getCategoryById } from "@/utils/categories";
+import { TransactionInputSchema, normalizeMerchantName } from "@/utils/validation";
 
 export default function SettingsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { addTransaction, clearAllData, transactions } = useTransactions();
+  const { pinSet, biometricEnabled, biometricAvailable, setupPin, removePin, toggleBiometric, lock } = useAuth();
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
 
-  const [showAddModal,  setShowAddModal]  = useState(false);
-  const [showCatSel,   setShowCatSel]    = useState(false);
-  const [merchant,     setMerchant]      = useState("");
-  const [amount,       setAmount]        = useState("");
-  const [bank,         setBank]          = useState("بنك الراجحي");
-  const [selCategory,  setSelCategory]   = useState<Category>(getCategoryById("other"));
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showCatSel, setShowCatSel] = useState(false);
+  const [showPinSetup, setShowPinSetup] = useState(false);
+  const [pinStep, setPinStep] = useState<"enter" | "confirm">("enter");
+  const [firstPin, setFirstPin] = useState("");
+  const [pinError, setPinError] = useState("");
+
+  const [merchant, setMerchant] = useState("");
+  const [amount, setAmount] = useState("");
+  const [bank, setBank] = useState("بنك الراجحي");
+  const [selCategory, setSelCategory] = useState<Category>(getCategoryById("other"));
+  const [addError, setAddError] = useState("");
+
+  const banks = [
+    "بنك الراجحي",
+    "البنك الأهلي السعودي",
+    "بنك الرياض",
+    "بنك ساب",
+    "بنك البلاد",
+    "بنك الجزيرة",
+    "بنك النماء",
+    "أخرى",
+  ];
 
   const handleAdd = async () => {
+    setAddError("");
     const parsed = parseFloat(amount.replace(/,/g, ""));
-    if (!merchant.trim() || isNaN(parsed) || parsed <= 0) {
-      Alert.alert("خطأ", "يرجى إدخال اسم المتجر والمبلغ بشكل صحيح");
-      return;
-    }
-    await addTransaction({
+
+    const result = TransactionInputSchema.safeParse({
       bankName: bank,
       amount: parsed,
       merchantName: merchant.trim(),
@@ -48,10 +68,20 @@ export default function SettingsScreen() {
       categoryId: selCategory.id,
       isManual: true,
     });
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    if (!result.success) {
+      setAddError(result.error.issues[0]?.message ?? "خطأ في البيانات");
+      return;
+    }
+
+    await addTransaction(result.data);
+    if (Platform.OS !== "web") {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
     setShowAddModal(false);
     setMerchant("");
     setAmount("");
+    setAddError("");
   };
 
   const handleClear = () => {
@@ -65,23 +95,42 @@ export default function SettingsScreen() {
           style: "destructive",
           onPress: async () => {
             await clearAllData();
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            if (Platform.OS !== "web") {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            }
           },
         },
       ],
     );
   };
 
-  const banks = [
-    "بنك الراجحي",
-    "البنك الأهلي السعودي",
-    "بنك الرياض",
-    "بنك ساب",
-    "بنك البلاد",
-    "بنك الجزيرة",
-    "بنك النماء",
-    "أخرى",
-  ];
+  const handlePinSetup = (pin: string) => {
+    if (pinStep === "enter") {
+      setFirstPin(pin);
+      setPinStep("confirm");
+      setPinError("");
+    } else {
+      if (pin === firstPin) {
+        setupPin(pin).then(() => {
+          setShowPinSetup(false);
+          setPinStep("enter");
+          setFirstPin("");
+          setPinError("");
+        });
+      } else {
+        setPinError("الرمزان غير متطابقين، حاول مرة أخرى");
+        setPinStep("enter");
+        setFirstPin("");
+      }
+    }
+  };
+
+  const handleRemovePin = () => {
+    Alert.alert("إزالة الرمز السري", "هل تريد إزالة حماية الرمز السري؟", [
+      { text: "إلغاء", style: "cancel" },
+      { text: "إزالة", style: "destructive", onPress: () => removePin() },
+    ]);
+  };
 
   return (
     <ScrollView
@@ -105,12 +154,61 @@ export default function SettingsScreen() {
 
       <SectionTitle title="الأمان والخصوصية" colors={colors} />
 
-      <InfoCard colors={colors} lines={[
-        "قاعدة البيانات مشفرة بالكامل على جهازك",
-        "لا يتم إرسال أي بيانات للإنترنت",
-        "رسائل OTP يتم تجاهلها تلقائياً",
-        "النسخ الاحتياطي التلقائي معطّل",
-      ]} />
+      <View style={[styles.securityCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View style={styles.secRow}>
+          <View style={[styles.secIcon, { backgroundColor: colors.primary + "22" }]}>
+            <Feather name="lock" size={16} color={colors.primary} />
+          </View>
+          <Text style={[styles.secLabel, { color: colors.foreground }]}>الرمز السري</Text>
+          <TouchableOpacity
+            style={[
+              styles.secToggle,
+              { backgroundColor: pinSet ? colors.negative + "22" : colors.positive + "22" },
+            ]}
+            onPress={pinSet ? handleRemovePin : () => setShowPinSetup(true)}
+          >
+            <Text style={{ color: pinSet ? colors.negative : colors.positive, fontSize: 13, fontWeight: "600" }}>
+              {pinSet ? "إزالة" : "تفعيل"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {pinSet && biometricAvailable && Platform.OS !== "web" && (
+          <View style={[styles.secRow, { marginTop: 12 }]}>
+            <View style={[styles.secIcon, { backgroundColor: colors.accent + "22" }]}>
+              <Feather name="cpu" size={16} color={colors.accent} />
+            </View>
+            <Text style={[styles.secLabel, { color: colors.foreground }]}>المصادقة البيومترية</Text>
+            <Switch
+              value={biometricEnabled}
+              onValueChange={toggleBiometric}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor={biometricEnabled ? "#fff" : colors.mutedForeground}
+            />
+          </View>
+        )}
+
+        {pinSet && (
+          <TouchableOpacity style={styles.lockNowBtn} onPress={lock}>
+            <Feather name="shield" size={14} color={colors.mutedForeground} />
+            <Text style={[styles.lockNowText, { color: colors.mutedForeground }]}>قفل التطبيق الآن</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      <View style={[styles.infoCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        {[
+          "البيانات مشفرة ومحفوظة محلياً على جهازك",
+          "لا يتم إرسال أي بيانات للإنترنت",
+          "رسائل OTP يتم تجاهلها تلقائياً",
+          "الرمز السري مخزن بشكل آمن",
+        ].map((l, i) => (
+          <View key={i} style={styles.infoRow}>
+            <Feather name="shield" size={13} color="#10B981" />
+            <Text style={[styles.infoText, { color: colors.mutedForeground }]}>{l}</Text>
+          </View>
+        ))}
+      </View>
 
       <SectionTitle title="قوالب البنوك (محرك التحليل)" colors={colors} />
 
@@ -132,7 +230,7 @@ export default function SettingsScreen() {
       <View style={[styles.statsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <StatItem colors={colors} label="إجمالي العمليات" value={transactions.length.toString()} />
         <StatItem colors={colors} label="الفئات المدعومة" value={CATEGORIES.length.toString()} />
-        <StatItem colors={colors} label="البنوك المدعومة" value="6" />
+        <StatItem colors={colors} label="البنوك المدعومة" value={BANK_REGEX_TEMPLATES.length.toString()} />
       </View>
 
       <SectionTitle title="الخطر" colors={colors} />
@@ -144,13 +242,6 @@ export default function SettingsScreen() {
         <Feather name="trash-2" size={18} color="#F43F5E" />
         <Text style={styles.dangerText}>حذف جميع البيانات</Text>
       </TouchableOpacity>
-
-      <View style={[styles.aboutCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <Text style={[styles.aboutTitle, { color: colors.foreground }]}>PureWallet</Text>
-        <Text style={[styles.aboutSub, { color: colors.mutedForeground }]}>
-          تطبيق محلي ومشفر لتتبع مصروفاتك البنكية{"\n"}الإصدار 1.0.0
-        </Text>
-      </View>
 
       <Modal visible={showAddModal} transparent animationType="slide" onRequestClose={() => setShowAddModal(false)}>
         <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={() => setShowAddModal(false)} />
@@ -184,7 +275,10 @@ export default function SettingsScreen() {
                 <TouchableOpacity
                   key={b}
                   onPress={() => setBank(b)}
-                  style={[styles.bankChip, { backgroundColor: bank === b ? colors.primary : colors.muted, borderColor: bank === b ? colors.primary : colors.border }]}
+                  style={[
+                    styles.bankChip,
+                    { backgroundColor: bank === b ? colors.primary : colors.muted, borderColor: bank === b ? colors.primary : colors.border },
+                  ]}
                 >
                   <Text style={{ color: bank === b ? "#fff" : colors.mutedForeground, fontSize: 13 }}>{b}</Text>
                 </TouchableOpacity>
@@ -202,12 +296,30 @@ export default function SettingsScreen() {
             <Feather name="chevron-down" size={16} color={selCategory.color} />
           </TouchableOpacity>
 
+          {addError ? (
+            <Text style={[styles.errorText, { color: colors.negative }]}>{addError}</Text>
+          ) : null}
+
           <TouchableOpacity
             style={[styles.addBtn, { backgroundColor: colors.primary }]}
             onPress={handleAdd}
           >
             <Text style={styles.addBtnText}>إضافة العملية</Text>
           </TouchableOpacity>
+        </View>
+      </Modal>
+
+      <Modal visible={showPinSetup} transparent animationType="slide" onRequestClose={() => setShowPinSetup(false)}>
+        <View style={[styles.pinModal, { backgroundColor: colors.background }]}>
+          <TouchableOpacity style={styles.pinClose} onPress={() => { setShowPinSetup(false); setPinStep("enter"); setFirstPin(""); setPinError(""); }}>
+            <Feather name="x" size={24} color={colors.mutedForeground} />
+          </TouchableOpacity>
+          <PinPad
+            onComplete={handlePinSetup}
+            title={pinStep === "enter" ? "أدخل الرمز السري الجديد" : "أكد الرمز السري"}
+            subtitle={pinStep === "enter" ? "4 أرقام سيتم استخدامها لقفل التطبيق" : "أدخل الرمز مرة أخرى للتأكيد"}
+            error={pinError}
+          />
         </View>
       </Modal>
 
@@ -243,19 +355,6 @@ function SettingRow({ colors, icon, iconColor, label, onPress }: any) {
   );
 }
 
-function InfoCard({ colors, lines }: { colors: any; lines: string[] }) {
-  return (
-    <View style={[styles.infoCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-      {lines.map((l, i) => (
-        <View key={i} style={styles.infoRow}>
-          <Feather name="shield" size={13} color="#10B981" />
-          <Text style={[styles.infoText, { color: colors.mutedForeground }]}>{l}</Text>
-        </View>
-      ))}
-    </View>
-  );
-}
-
 function StatItem({ colors, label, value }: { colors: any; label: string; value: string }) {
   return (
     <View style={styles.statRow}>
@@ -273,6 +372,13 @@ const styles = StyleSheet.create({
   settingRow: { flexDirection: "row", alignItems: "center", marginHorizontal: 16, padding: 14, borderRadius: 14, borderWidth: 1, marginBottom: 8, gap: 12 },
   settingIcon: { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center" },
   settingLabel: { flex: 1, fontSize: 15, fontWeight: "500" },
+  securityCard: { marginHorizontal: 16, borderRadius: 14, borderWidth: 1, padding: 14, marginBottom: 8 },
+  secRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  secIcon: { width: 34, height: 34, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  secLabel: { flex: 1, fontSize: 14, fontWeight: "500" },
+  secToggle: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 8 },
+  lockNowBtn: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: "#1E2A3A" },
+  lockNowText: { fontSize: 13 },
   infoCard: { marginHorizontal: 16, borderRadius: 14, borderWidth: 1, padding: 14, gap: 10, marginBottom: 8 },
   infoRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   infoText: { fontSize: 13 },
@@ -288,9 +394,6 @@ const styles = StyleSheet.create({
   statValue: { fontSize: 14, fontWeight: "600" },
   dangerBtn: { marginHorizontal: 16, borderRadius: 14, borderWidth: 1, padding: 14, flexDirection: "row", alignItems: "center", gap: 10 },
   dangerText: { color: "#F43F5E", fontSize: 15, fontWeight: "600" },
-  aboutCard: { marginHorizontal: 16, borderRadius: 14, borderWidth: 1, padding: 16, marginTop: 16, alignItems: "center", gap: 6 },
-  aboutTitle: { fontSize: 18, fontWeight: "800" },
-  aboutSub: { fontSize: 13, textAlign: "center", lineHeight: 20 },
   overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)" },
   modalSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20 },
   handle: { width: 40, height: 4, borderRadius: 2, alignSelf: "center", marginBottom: 16, opacity: 0.4 },
@@ -298,8 +401,11 @@ const styles = StyleSheet.create({
   label: { fontSize: 13, fontWeight: "500", marginBottom: 6, marginTop: 4 },
   input: { borderRadius: 12, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 11, fontSize: 15, marginBottom: 12, textAlign: "right" },
   bankChip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1 },
-  catBtn: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, borderWidth: 1.5, marginBottom: 20 },
+  catBtn: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, borderWidth: 1.5, marginBottom: 12 },
   catBtnText: { flex: 1, fontSize: 14, fontWeight: "600" },
+  errorText: { fontSize: 13, marginBottom: 8, textAlign: "center" },
   addBtn: { borderRadius: 14, paddingVertical: 14, alignItems: "center" },
   addBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  pinModal: { flex: 1, alignItems: "center", justifyContent: "center" },
+  pinClose: { position: "absolute", top: 60, right: 24 },
 });

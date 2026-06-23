@@ -1,14 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import React from "react";
-import {
-  FlatList,
-  Modal,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { FlatList, Modal, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useColors } from "@/hooks/useColors";
@@ -26,33 +19,27 @@ export function CategorySelector({ visible, onClose, onSelect, selectedId }: Pro
   const insets = useSafeAreaInsets();
 
   const handleSelect = (cat: Category) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
     onSelect(cat);
     onClose();
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose} />
       <View
         style={[
           styles.sheet,
-          {
-            backgroundColor: colors.card,
-            paddingBottom: insets.bottom + 16,
-          },
+          { backgroundColor: colors.card, paddingBottom: insets.bottom + 16 },
         ]}
       >
         <View style={[styles.handle, { backgroundColor: colors.mutedForeground }]} />
         <Text style={[styles.title, { color: colors.foreground }]}>اختر فئة</Text>
 
         <FlatList
-          data={CATEGORIES}
+          data={CATEGORIES.filter((c) => c.id !== "uncategorized")}
           keyExtractor={(c) => c.id}
           numColumns={3}
           columnWrapperStyle={styles.row}
@@ -88,10 +75,7 @@ export function CategorySelector({ visible, onClose, onSelect, selectedId }: Pro
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-  },
+  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)" },
   sheet: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
@@ -106,16 +90,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     opacity: 0.4,
   },
-  title: {
-    fontSize: 18,
-    fontWeight: "700",
-    textAlign: "center",
-    marginBottom: 16,
-  },
-  row: {
-    justifyContent: "space-between",
-    marginBottom: 10,
-  },
+  title: { fontSize: 18, fontWeight: "700", textAlign: "center", marginBottom: 16 },
+  row: { justifyContent: "space-between", marginBottom: 10 },
   item: {
     flex: 1,
     marginHorizontal: 4,
@@ -132,9 +108,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  itemLabel: {
-    fontSize: 12,
-    fontWeight: "500",
-    textAlign: "center",
-  },
+  itemLabel: { fontSize: 12, fontWeight: "500", textAlign: "center" },
 });
