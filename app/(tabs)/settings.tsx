@@ -271,7 +271,7 @@ export default function SettingsScreen() {
             <View style={styles.smsBanks}>
               <Text style={[styles.smsBanksLabel, { color: colors.mutedForeground }]}>البنوك المدعومة: </Text>
               <Text style={[styles.smsBanksLabel, { color: colors.primary }]}>
-                الراجحي • الأهلي • الرياض • العربي الوطني
+                الراجحي (AlRajhiBank) • الأهلي (SNB-AIAhli) • الرياض • العربي الوطني
               </Text>
             </View>
           </View>
