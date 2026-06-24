@@ -1,279 +1,204 @@
 <div align="center">
 
-<img src="assets/images/icon.png" alt="PureWallet Logo" width="120" height="120" style="border-radius: 24px;" />
+<img src="assets/images/icon.png" alt="PureWallet" width="110" height="110" style="border-radius: 22px;" />
 
 # PureWallet
 
-**تطبيق محلي ومشفر لتتبع مصروفاتك البنكية تلقائياً من رسائل SMS**
+**تطبيق أندرويد محلي لتتبع مصروفاتك تلقائياً من رسائل SMS البنكية**
 
 [![CI](https://github.com/taroq4-2/PureWallet-os73/actions/workflows/ci.yml/badge.svg)](https://github.com/taroq4-2/PureWallet-os73/actions/workflows/ci.yml)
-[![Build Android APK](https://github.com/taroq4-2/PureWallet-os73/actions/workflows/build-android.yml/badge.svg)](https://github.com/taroq4-2/PureWallet-os73/actions/workflows/build-android.yml)
+[![Build](https://github.com/taroq4-2/PureWallet-os73/actions/workflows/build-android.yml/badge.svg)](https://github.com/taroq4-2/PureWallet-os73/actions/workflows/build-android.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Expo SDK](https://img.shields.io/badge/Expo-54-000020?logo=expo)](https://expo.dev)
-[![React Native](https://img.shields.io/badge/React%20Native-0.81-61DAFB?logo=react)](https://reactnative.dev)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript)](https://typescriptlang.org)
+[![Expo SDK 54](https://img.shields.io/badge/Expo-SDK%2054-000020?logo=expo&logoColor=white)](https://expo.dev)
+[![React Native 0.81](https://img.shields.io/badge/React%20Native-0.81-61DAFB?logo=react)](https://reactnative.dev)
+
+### [⬇️ تحميل APK — v2.0.0](https://github.com/taroq4-2/PureWallet-os73/releases/download/v2.0.0/PureWallet-v2.0.0.apk)
+
+> لا إنترنت · لا سحابة · لا بيانات تغادر هاتفك
 
 </div>
 
 ---
 
-## نظرة عامة
+## ما هو PureWallet؟
 
-**PureWallet** هو تطبيق أندرويد محلي بالكامل *(Local-First)* مبني بتقنية **React Native / Expo**، مصمم لتتبع وتصنيف المصروفات تلقائياً عن طريق تحليل رسائل SMS البنكية الواردة على هاتفك.
-
-> **لا إنترنت — لا سحابة — لا بيانات تغادر هاتفك.**
+PureWallet تطبيق **مفتوح المصدر** يقرأ رسائل SMS من بنوكك السعودية، يستخرج العمليات المالية تلقائياً، ويساعدك على تتبع إنفاقك وإدارة ميزانيتك — كل ذلك **محلياً على جهازك تماماً**.
 
 ---
 
-## الميزات الرئيسية
+## الميزات
 
-| الميزة | التفاصيل |
-|--------|----------|
-| 🔍 **محرك تحليل SMS** | يستخرج المبلغ والمتجر والبنك تلقائياً بالـ Regex |
-| 🛡️ **فلتر OTP** | يتجاهل رسائل التحقق والرموز المؤقتة فوراً |
-| 🔒 **تخزين مشفر** | كل البيانات محلية ومشفرة على الجهاز |
-| 📊 **لوحة تحكم** | رسم بياني دائري تفاعلي + توزيع حسب الفئة |
-| 🗂️ **تصنيف ذكي** | يتذكر تصنيف كل متجر ويطبقه تلقائياً في المستقبل |
-| 🔎 **بحث وتصفية** | بحث نصي + فلترة حسب الفئة والبنك |
-| ✍️ **إدخال يدوي** | أضف عمليات يدوياً من أي بنك |
-| 🏦 **5 بنوك سعودية** | الراجحي، الأهلي، الرياض، ساب، البلاد |
+| | الميزة | التفاصيل |
+|---|--------|----------|
+| 📩 | **قراءة SMS تلقائية** | يستورد عمليات الدفع من رسائل البنوك فور فتح التطبيق |
+| 🔍 | **محرك Regex متقدم** | يستخرج البنك + المبلغ + المتجر + التوقيت بدقة |
+| 🚫 | **فلتر OTP** | يتجاهل رسائل التحقق والرموز تلقائياً |
+| 📊 | **ميزانية شهرية** | حدد سقفاً لكل فئة مع شريط تقدم بصري وتنبيه عند الاقتراب |
+| 💡 | **اقتراح ميزانية ذكي** | يحسب متوسط إنفاقك في الأشهر الثلاثة الماضية ويقترح حدوداً |
+| 🗂️ | **تصنيف ذكي** | يتذكر تصنيف كل متجر ويطبقه مستقبلاً |
+| 🔒 | **خصوصية كاملة** | لا إنترنت، لا analytics، لا سحابة |
+| ✍️ | **إدخال يدوي** | أضف عمليات يدوياً بأي وقت |
+| 🔑 | **رمز سري + بيومتري** | حماية التطبيق ببصمة الإصبع أو رمز 4 أرقام |
 
 ---
 
 ## البنوك المدعومة
 
-| البنك | الاسم الإنجليزي | القوالب |
-|-------|----------------|---------|
-| 🏦 بنك الراجحي | Al Rajhi Bank | 3 قوالب |
-| 🏦 البنك الأهلي السعودي | Saudi National Bank (SNB) | 3 قوالب |
-| 🏦 بنك الرياض | Riyad Bank | 2 قوالب |
-| 🏦 بنك ساب | SABB | 2 قوالب |
-| 🏦 بنك البلاد | Bank Albilad | 2 قوالب |
+| البنك | عدد قوالب SMS |
+|-------|--------------|
+| 🏦 بنك الراجحي | 3 |
+| 🏦 البنك الأهلي السعودي | 3 |
+| 🏦 بنك الرياض | 2 |
+| 🏦 بنك ساب | 2 |
+| 🏦 بنك البلاد | 2 |
+| 🏦 بنك الجزيرة | 2 |
 
 ---
 
-## الشاشات
+## تثبيت التطبيق
 
-```
-┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
-│   الرئيسية      │  │  غير المصنف     │  │   العمليات      │  │   الإعدادات     │
-│                 │  │                 │  │                 │  │                 │
-│  1,820 ر.س      │  │  ⚠ 2 عمليات    │  │  🔍 بحث...      │  │  + عملية يدوية │
-│                 │  │                 │  │                 │  │                 │
-│   [دائري]       │  │  • متجر XYZ     │  │  الكل │ بقالة.. │  │  🔒 أمان        │
-│                 │  │    صنّف ←       │  │                 │  │                 │
-│  بقالة  25%     │  │  • متجر جديد    │  │  • بنده 152.5   │  │  📋 القوالب     │
-│  صحة    18%     │  │    صنّف ←       │  │  • ستاربكس 45   │  │                 │
-│  وقود   11%     │  │                 │  │  • محطة شل 200  │  │  ⚠ حذف الكل   │
-└─────────────────┘  └─────────────────┘  └─────────────────┘  └─────────────────┘
-```
+### الطريقة المباشرة — APK جاهز للتنزيل
+
+**[⬇️ تحميل PureWallet-v2.0.0.apk](https://github.com/taroq4-2/PureWallet-os73/releases/download/v2.0.0/PureWallet-v2.0.0.apk)**
+
+1. حمّل الملف من الرابط أعلاه
+2. في هاتفك: **الإعدادات ← الأمان ← السماح بتثبيت تطبيقات من مصادر غير معروفة**
+3. افتح ملف الـ APK وثبّت التطبيق
+
+> **الحجم:** ~88 MB &nbsp;·&nbsp; **الحد الأدنى:** Android 6.0 (API 23)+
 
 ---
 
-## المعمارية التقنية (Architecture)
+## البناء من المصدر
 
+```bash
+# استنساخ المشروع
+git clone https://github.com/taroq4-2/PureWallet-os73.git
+cd PureWallet-os73
+
+# تثبيت الحزم
+npm install
+
+# تشغيل بيئة التطوير (Expo Go)
+npx expo start
 ```
-[رسالة SMS واردة]
-        │
-        ▼
-[فحص OTP Keywords] ──► إذا OTP: تجاهل فوراً 🛑
-        │
-        ▼
-[محرك Regex — BankPatterns[]]
-        │
-        ▼
-[استخراج: بنك + مبلغ + متجر + وقت]
-        │
-        ▼
-[فحص جدول Merchant→Category]
-        ├── متجر معروف ──► تصنيف تلقائي ✅
-        └── متجر جديد ──► وضع "غير مصنف" 📥
-                                │
-                                ▼
-                    [إشعار في تبويب "غير المصنف"]
-        │
-        ▼
-[تخزين مشفر — AsyncStorage (AES-256)]
-        │
-        ▼
-[عرض في الواجهة — React Native Screens]
+
+لبناء APK محلي:
+```bash
+npm install -g eas-cli
+eas login
+eas build --platform android --profile preview
 ```
 
 ---
 
-## الهيكل البرمجي
+## المكدس التقني
+
+| التقنية | الإصدار | الدور |
+|---------|---------|-------|
+| **React Native** | 0.81 | إطار التطبيق الأساسي |
+| **Expo SDK** | 54 | بيئة البناء والتطوير |
+| **expo-router** | 6.x | التنقل بين الشاشات |
+| **TypeScript** | 5.9 | سلامة الأنواع الكاملة |
+| **react-native-get-sms-android** | 2.1 | قراءة رسائل SMS (مفتوح المصدر) |
+| **AsyncStorage** | 2.x | التخزين المحلي المشفر |
+| **react-native-svg** | 15.x | الرسوم البيانية الدائرية |
+| **react-native-reanimated** | 4.x | الرسوم المتحركة |
+| **Zod** | 3.x | التحقق من صحة البيانات |
+| **react-native-local-authentication** | 17.x | البيومتري والرمز السري |
+
+---
+
+## هيكل المشروع
 
 ```
 PureWallet-os73/
 ├── app/
-│   ├── _layout.tsx              # Root layout + Providers
+│   ├── _layout.tsx              # Root layout + جميع الـ Providers
 │   └── (tabs)/
-│       ├── _layout.tsx          # Tab bar (4 tabs)
-│       ├── index.tsx            # Dashboard + Donut Chart
-│       ├── uncategorized.tsx    # Uncategorized inbox
-│       ├── transactions.tsx     # Full history + Search
-│       └── settings.tsx        # Settings + Manual entry
-├── components/
-│   ├── TransactionCard.tsx      # Transaction list item
-│   ├── DonutChart.tsx           # SVG donut chart
-│   ├── CategorySelector.tsx     # Bottom sheet category picker
-│   └── EmptyState.tsx           # Empty state component
+│       ├── index.tsx            # لوحة التحكم + الرسم الدائري
+│       ├── uncategorized.tsx    # صندوق العمليات غير المصنفة
+│       ├── transactions.tsx     # السجل الكامل + البحث والفلترة
+│       ├── budget.tsx           # الميزانية الشهرية بالفئات
+│       └── settings.tsx        # الإعدادات + SMS + الأمان
 ├── context/
-│   └── TransactionsContext.tsx  # Global state + AsyncStorage
+│   ├── TransactionsContext.tsx  # حالة العمليات المالية
+│   ├── SmsContext.tsx           # قراءة SMS وإدارة الصلاحيات
+│   ├── BudgetContext.tsx        # الميزانية الشهرية
+│   └── AuthContext.tsx          # الرمز السري والبيومتري
 ├── utils/
-│   ├── categories.ts            # 10 categories with icons/colors
-│   ├── smsParser.ts             # Regex parsing engine
-│   ├── storage.ts               # AsyncStorage helpers
-│   └── bankTemplates.ts         # Bank template metadata
-├── constants/
-│   └── colors.ts                # Dark fintech theme tokens
-└── assets/
-    └── images/
-        └── icon.png             # App icon
+│   ├── bankTemplates.ts         # قوالب Regex لكل بنك
+│   ├── smsParser.ts             # محرك تحليل الرسائل
+│   ├── smsStorage.ts            # تخزين حالة SMS (معرفات مُقروءة، وقت آخر مسح)
+│   └── storage.ts               # AsyncStorage helpers
+└── .github/workflows/
+    ├── ci.yml                   # TypeScript typecheck عند كل push
+    └── build-android.yml        # بناء APK تلقائي وتسليمه كـ artifact
 ```
 
 ---
 
-## المكدس التقني (Tech Stack)
+## كيف تعمل قراءة SMS؟
 
-| التقنية | الإصدار | الاستخدام |
-|---------|---------|-----------|
-| React Native | 0.81 | إطار التطبيق |
-| Expo SDK | 54 | بيئة التطوير والبناء |
-| expo-router | 6.x | التنقل بين الشاشات |
-| react-native-svg | 15.x | الرسوم البيانية |
-| AsyncStorage | 2.x | التخزين المحلي المشفر |
-| TypeScript | 5.9 | سلامة الأنواع |
-| react-native-reanimated | 4.x | الرسوم المتحركة |
-
----
-
-## التثبيت والتشغيل المحلي
-
-### المتطلبات
-- Node.js 18+
-- pnpm أو npm
-- تطبيق [Expo Go](https://expo.dev/go) على هاتفك (للتجربة)
-
-### الخطوات
-
-```bash
-# 1. استنساخ المشروع
-git clone https://github.com/taroq4-2/PureWallet-os73.git
-cd PureWallet-os73
-
-# 2. تثبيت المكتبات
-npm install
-
-# 3. تشغيل خادم التطوير
-npx expo start
-
-# 4. امسح QR Code بتطبيق Expo Go
+```
+رسالة SMS واردة من البنك
+        │
+        ▼
+فحص OTP ──► رمز تحقق؟ → تجاهل فوري 🛑
+        │
+        ▼
+Regex Engine (bankTemplates.ts)
+        │
+        ▼
+استخراج: [ بنك | مبلغ | متجر | تاريخ ]
+        │
+        ▼
+تحقق من قاعدة بيانات المتاجر المصنفة
+        ├── متجر معروف ──► تصنيف تلقائي ✅
+        └── متجر جديد ──► صندوق "غير مصنف" 📥
+        │
+        ▼
+تخزين في AsyncStorage (محلياً على الجهاز)
 ```
 
 ---
 
-## بناء ملف APK
+## الخصوصية والأمان
 
-### المتطلبات
-- حساب مجاني على [expo.dev](https://expo.dev)
-- EAS CLI
-
-```bash
-# 1. تثبيت EAS CLI
-npm install -g eas-cli
-
-# 2. تسجيل الدخول
-eas login
-
-# 3. ضبط المشروع (مرة واحدة)
-eas build:configure
-
-# 4. بناء APK للتوزيع المباشر
-eas build --platform android --profile preview
-
-# 5. بعد ~15 دقيقة، تحصل على رابط تحميل APK مباشر
-```
+| | البند |
+|---|-------|
+| ✅ | **لا إنترنت** — التطبيق لا يتصل بأي خادم خارجي |
+| ✅ | **معالجة محلية** — كل الـ Regex يعمل على جهازك فقط |
+| ✅ | **فلتر OTP** — رموز التحقق لا تُخزّن إطلاقاً |
+| ✅ | **مفتوح المصدر** — يمكنك مراجعة كل سطر كود |
+| ✅ | **الصلاحيات المطلوبة فقط:** `READ_SMS` و `USE_BIOMETRIC` |
 
 ---
 
-## GitHub Actions
+## الشاشات والتبويبات
 
-يحتوي المشروع على workflow تلقائيين:
-
-### 1. CI — فحص الكود
-يُشغَّل تلقائياً عند كل `push` أو `pull request`:
-- ✅ TypeScript typecheck
-- ✅ فحص صياغة الكود
-
-### 2. Build Android APK
-يُشغَّل تلقائياً عند الـ push على `main`:
-- 🔨 بناء APK عبر EAS Build Cloud
-- 📦 رفع الـ APK كـ artifact قابل للتحميل
-
-#### إعداد GitHub Secrets المطلوبة
-```
-EXPO_TOKEN  →  رمز المصادقة من expo.dev/settings/access-tokens
-```
+| التبويب | الوصف |
+|---------|-------|
+| **الرئيسية** | ملخص الشهر + رسم دائري بالفئات + آخر 5 عمليات |
+| **غير مصنف** | صندوق العمليات التي تحتاج تصنيفاً مع عداد |
+| **العمليات** | السجل الكامل مع بحث نصي وفلتر بالفئة والبنك |
+| **الميزانية** | حدود إنفاق شهرية بالفئة + اقتراح تلقائي |
+| **الإعدادات** | إعداد SMS + الأمان + إدخال يدوي + قوالب البنوك |
 
 ---
 
-## الأمان والخصوصية
+## الرخصة
 
-- **لا صلاحية إنترنت** — التطبيق لا يطلب `INTERNET` permission للبيانات
-- **تشفير محلي** — جميع البيانات مخزنة محلياً بتشفير AES-256
-- **فلتر OTP** — رسائل التحقق تُتلف فوراً من الذاكرة
-- **لا نسخ احتياطي** — `android:allowBackup="false"` معطّل
-- **تحليل أمني** — مصمم لاجتياز فحص MobSF
-
----
-
-## الفئات المدعومة
-
-| الفئة | الأيقونة | اللون |
-|-------|---------|-------|
-| البقالة | 🛒 | أخضر |
-| الوقود | ⚡ | برتقالي |
-| المقاهي | ☕ | بنفسجي |
-| المطاعم | 🍽️ | أحمر |
-| الترفيه | 📺 | وردي |
-| الصحة | ❤️ | أحمر فاتح |
-| التسوق | 🏷️ | أزرق |
-| المواصلات | 🧭 | فيروزي |
-| الخدمات | 🔧 | نيلي |
-| أخرى | ⋯ | رمادي |
-
----
-
-## المساهمة
-
-```bash
-# 1. Fork المشروع
-# 2. أنشئ فرعاً جديداً
-git checkout -b feature/amazing-feature
-
-# 3. اعمل تغييراتك وفحص الكود
-npm run typecheck
-
-# 4. commit وpush
-git commit -m "feat: add amazing feature"
-git push origin feature/amazing-feature
-
-# 5. افتح Pull Request
-```
-
----
-
-## الترخيص
-
-هذا المشروع مرخص بموجب رخصة **MIT** — انظر ملف [LICENSE](LICENSE) للتفاصيل.
+هذا المشروع مرخص بموجب **MIT** — انظر ملف [LICENSE](LICENSE)
 
 ---
 
 <div align="center">
 
-صُنع بـ ❤️ لتسهيل إدارة المصروفات اليومية
+**[⬇️ تحميل APK — v2.0.0](https://github.com/taroq4-2/PureWallet-os73/releases/download/v2.0.0/PureWallet-v2.0.0.apk)**
 
-**PureWallet** — محفظتك، خصوصيتك، بياناتك.
+صُنع بـ ❤️ لمن يريد تتبع مصروفاته بخصوصية تامة
+
+*PureWallet — محفظتك، بياناتك، جهازك.*
 
 </div>
