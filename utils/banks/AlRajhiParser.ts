@@ -1,52 +1,52 @@
 import type { ParsedTransaction } from "../smsParser";
 
 /**
- * AlRajhi SMS patterns — sender: AlRajhiBank
- * Works even when the bank name is absent from the SMS body.
+ * Known sender IDs for AlRajhi Bank.
+ * Add any variant you encounter from your device.
  */
-const ARABIC_DEBIT =
-  /تم\s+(?:الخصم|خصم|سحب)\s+(?:من\s+(?:حسابك|حسابكم|بطاقتك)\s+)?(?:مبلغ\s+)?(\d[\d,]*(?:\.\d{1,2})?)\s*(?:ريال|SAR|ر\.س)[^\n]*?(?:لدى|في|من)\s+([^\n،]{2,60}?)(?:\s+(?:رقم|بتاريخ|التاريخ|الرصيد|في|على)|\s+\d{1,2}[\/\-]\d|\n|$)/iu;
+export const ALRAJHI_SENDERS = [
+  "AlRajhiBank",
+  "AlRajhi",
+  "ALRAJHI",
+  "Alrajhi",
+  "al-rajhi",
+  "RAJHI",
+];
 
-const ARABIC_PURCHASE =
-  /(?:إتمام\s+)?(?:عملية\s+)?(?:الشراء|شراء)[^\n]*?(\d[\d,]*(?:\.\d{1,2})?)\s*(?:ريال|SAR)[^\n]*?(?:لدى|في|من)\s+([^\n،]{2,60}?)(?:\s+(?:رقم|بتاريخ|التاريخ|في|على)|\s+\d{1,2}[\/\-]\d|\n|$)/iu;
+const AMOUNT_MERCHANT_PATTERNS = [
+  // Arabic: "تم خصم مبلغ 250.00 ريال من حسابكم ... لدى كارفور"
+  /(?:تم\s+)?(?:خصم|اقتطع|سحب)\s+(?:مبلغ\s+)?(\d[\d,]*(?:\.\d{1,2})?)\s*(?:ريال|SAR|ر\.س)[^]*?(?:لدى|في|من|عند)\s+([^\n\d،.،]{2,60}?)(?:\s*[\n\r]|\s+رقم|\s+بتاريخ|\s+الرصيد|\s+المرجع|$)/iu,
+  // Arabic: "إتمام عملية الشراء بمبلغ X ... لدى Y"
+  /(?:عملية\s+)?(?:الشراء|شراء)\s+(?:بمبلغ\s+)?(\d[\d,]*(?:\.\d{1,2})?)\s*(?:ريال|SAR)[^]*?(?:لدى|في|من)\s+([^\n\d،.]{2,60}?)(?:\s*[\n\r]|\s+رقم|\s+المرجع|$)/iu,
+  // Arabic generic: "بمبلغ X ريال لدى Y"
+  /بمبلغ\s+(\d[\d,]*(?:\.\d{1,2})?)\s*(?:ريال|SAR|ر\.س)[^]*?(?:لدى|في|عند)\s+([^\n\d،.]{2,60}?)(?:\s*[\n\r]|\s+رقم|$)/iu,
+  // Arabic: "مبلغ X ريال في/لدى Y"
+  /مبلغ\s+(\d[\d,]*(?:\.\d{1,2})?)\s*(?:ريال|SAR)[^]*?(?:لدى|في)\s+([^\n\d،.]{2,60}?)(?:\s*[\n\r]|\s+رقم|\s+بتاريخ|$)/iu,
+  // English: "SAR 250.00 at Carrefour"
+  /(?:SAR|SR)\s+([\d,]+(?:\.\d{1,2})?)[^]*?(?:at|At)\s+([^\n.،]{2,60}?)(?:\s+Ref|\s+on\s+\d|\s*\n|$)/i,
+  // English with bank name: "Al-Rajhi SAR 100 at McDonald's"
+  /Al[\s-]?Rajhi[^]*?(?:SAR|SR)\s*([\d,]+(?:\.\d{1,2})?)[^]*?(?:at|At)\s+([^\n.،]{2,60}?)(?:\s+Ref|\s*\n|$)/i,
+];
 
-const ARABIC_KHASAMA =
-  /خُصم\s+(?:مبلغ\s+)?(\d[\d,]*(?:\.\d{1,2})?)\s*(?:ريال|SAR)[^\n]*?(?:لدى|في)\s+([^\n،]{2,60}?)(?:\s+(?:رقم|على|بتاريخ|في)|\s+\d{1,2}[\/\-]\d|\n|$)/iu;
-
-const EN_WITH_NAME =
-  /Al[\s-]?Rajhi\b[^\n]*?SAR\s*([\d,]+(?:\.\d{1,2})?)[^\n]*?(?:at|At|@)\s+([A-Za-z0-9][^\n،]{1,59}?)(?:\s+(?:Ref|Bal|on\s+\d)|\n|$)/i;
-
-const EN_DEDUCTED =
-  /[Dd]educted[^\n]*?SAR\s*([\d,]+(?:\.\d{1,2})?)[^\n]*?(?:at|At|@)\s+([A-Za-z0-9][^\n،]{1,59}?)(?:\s+(?:Ref|Bal|ref|bal)|\s+\d{1,2}[\/\-]\d|\n|$)/i;
-
-const EN_PURCHASE =
-  /[Pp]urchase[^\n]*?SAR\s*([\d,]+(?:\.\d{1,2})?)[^\n]*?(?:at|At|@)\s+([A-Za-z0-9][^\n،]{1,59}?)(?:\s+(?:Ref|ref)|\.?\s*$|\n|$)/i;
-
-const PATTERNS = [ARABIC_DEBIT, ARABIC_PURCHASE, ARABIC_KHASAMA, EN_WITH_NAME, EN_DEDUCTED, EN_PURCHASE];
-
-function cleanMerchant(raw: string): string {
-  return raw
-    .trim()
-    .replace(/\s+(?:في|على|بتاريخ|التاريخ|الرصيد|رقم).*$/u, "")
-    .replace(/\s+\d{1,2}[\/\-]\d.*$/, "")
-    .replace(/\s+/g, " ")
-    .substring(0, 60);
-}
-
-export function matchesAlRajhi(sms: string): boolean {
+export function matchesAlRajhi(sms: string, sender?: string): boolean {
+  if (sender) {
+    const s = sender.toUpperCase().replace(/[-_\s]/g, "");
+    if (s.includes("ALRAJHI") || s.includes("RAJHI")) return true;
+  }
   return /الراجحي|ALRAJHI|Al[\s-]?Rajhi/i.test(sms);
 }
 
-export function parseAlRajhi(sms: string): ParsedTransaction | null {
-  for (const p of PATTERNS) {
+export function parseAlRajhi(sms: string, sender?: string): ParsedTransaction | null {
+  for (const p of AMOUNT_MERCHANT_PATTERNS) {
     const m = sms.match(p);
     if (m?.[1] && m?.[2]) {
       const amount = parseFloat(m[1].replace(/,/g, ""));
-      if (!isNaN(amount) && amount > 0) {
+      const merchant = m[2].trim().replace(/\s+/g, " ").substring(0, 60);
+      if (!isNaN(amount) && amount > 0 && merchant.length >= 2) {
         return {
           bankName: "بنك الراجحي",
           amount,
-          merchantName: cleanMerchant(m[2]),
+          merchantName: merchant,
           timestamp: Date.now(),
         };
       }
