@@ -21,7 +21,7 @@ export type SmsPermissionStatus = "unknown" | "granted" | "denied" | "blocked";
 
 interface SmsRaw {
   _id: string;
-  address: string;
+  address: string;   // sender ID — e.g. "AlRajhiBank", "SNB-AIAhli"
   body: string;
   date: number;
 }
@@ -126,14 +126,18 @@ export function SmsProvider({ children }: { children: React.ReactNode }) {
         for (const msg of messages) {
           if (seenIds.has(msg._id)) continue;
           newIds.push(msg._id);
-          const parsed = parseSms(msg.body);
+
+          // ── KEY FIX: pass msg.address (sender ID) so the parser can route
+          // by sender name (e.g. "AlRajhiBank", "SNB-AIAhli") instead of
+          // relying solely on the message body, which often omits the bank name.
+          const parsed = parseSms(msg.body, msg.address);
           if (parsed) {
             newTxs.push({
-              bankName: parsed.bankName,
-              amount: parsed.amount,
+              bankName:     parsed.bankName,
+              amount:       parsed.amount,
               merchantName: parsed.merchantName,
-              timestamp: msg.date,
-              smsId: msg._id,
+              timestamp:    msg.date,
+              smsId:        msg._id,
             });
           }
         }
