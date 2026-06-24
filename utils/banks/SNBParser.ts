@@ -1,28 +1,28 @@
 import type { ParsedTransaction } from "../smsParser";
 
 /**
- * SNB (البنك الأهلي السعودي) SMS patterns.
- * Sender IDs: SNB-AIAhli, SNB, NCBSms
- * Patterns work whether or not "SNB" / "الأهلي" appears in the body.
+ * SNB (البنك الأهلي السعودي) SMS patterns — senders: SNB-AIAhli, SNB, NCBSms
+ * Patterns work whether or not "SNB"/"الأهلي" appears in the body.
+ * Merchant names may contain dots (e.g. NOON.COM, AMAZON.COM).
  */
 const PATTERNS: RegExp[] = [
-  // SNB English: SAR 120.00 at MERCHANT
-  /SNB\b[^\n]*?SAR\s*([\d,]+(?:\.\d{1,2})?)[^\n]*?(?:at|At|@)\s+([^\n.،]{2,60}?)(?:\s+Ref|\s+on\s+\d|\n|$)/i,
+  // SNB English with bank name: SNB … SAR 120.00 … at MERCHANT
+  /SNB\b[^\n]*?SAR\s*([\d,]+(?:\.\d{1,2})?)[^\n]*?(?:at|At|@)\s+([A-Za-z0-9][^\n،]{1,59}?)(?:\s+(?:Ref|Bal|on\s+\d)|\n|$)/i,
 
-  // Arabic: أُجريت عملية / خصم
-  /(?:أُجريت\s+عملية|تم\s+(?:خصم|إتمام))[^\n]*?(\d[\d,]*(?:\.\d{1,2})?)\s*(?:ريال|SAR)(?:[^\n]*?)(?:في|لدى)\s+([^\n.،,\d]{2,60}?)(?:\s+رقم|\s+بتاريخ|\n|$)/iu,
+  // Arabic: أُجريت عملية / تم خصم
+  /(?:أُجريت\s+عملية|تم\s+(?:خصم|إتمام))[^\n]*?(\d[\d,]*(?:\.\d{1,2})?)\s*(?:ريال|SAR)[^\n]*?(?:في|لدى)\s+([^\n،]{2,60}?)(?:\s+(?:رقم|بتاريخ|التاريخ)|\s+\d{1,2}\/\d|\n|$)/iu,
 
-  // Arabic: البنك الأهلي … خصم … في …
-  /البنك\s+الأهلي[^\n]*?(\d[\d,]*(?:\.\d{1,2})?)\s*(?:ريال|SAR)(?:[^\n]*?)(?:في|لدى)\s+([^\n.،,\d]{2,60}?)(?:\s+رقم|\s+بتاريخ|\n|$)/iu,
+  // Arabic: البنك الأهلي … في/لدى …
+  /البنك\s+الأهلي[^\n]*?(\d[\d,]*(?:\.\d{1,2})?)\s*(?:ريال|SAR)[^\n]*?(?:في|لدى)\s+([^\n،]{2,60}?)(?:\s+(?:رقم|بتاريخ)|\s+\d{1,2}\/\d|\n|$)/iu,
 
-  // English (no bank name): Deducted SAR 120.00 at MERCHANT
-  /[Dd]educted(?:\s+from[^\n]*?)?\s+SAR\s*([\d,]+(?:\.\d{1,2})?)[^\n]*?(?:at|At|@)\s+([^\n.،]{2,60}?)(?:\s+[Rr]ef|\s+[Bb]al|\.\s*\d|\n|$)/i,
+  // English (no bank name in body): Deducted SAR 120.00 … at MERCHANT
+  /[Dd]educted[^\n]*?SAR\s*([\d,]+(?:\.\d{1,2})?)[^\n]*?(?:at|At|@)\s+([A-Za-z0-9][^\n،]{1,59}?)(?:\s+(?:Ref|Bal|ref|bal)|\s+\d{1,2}\/\d|\n|$)/i,
 
-  // Purchase SAR 120.00 at MERCHANT
-  /[Pp]urchase\s+(?:of\s+)?SAR\s*([\d,]+(?:\.\d{1,2})?)[^\n]*?(?:at|At|@)\s+([^\n.،]{2,60}?)(?:\s+[Rr]ef|\.|\n|$)/i,
+  // English: Purchase SAR 120.00 at MERCHANT
+  /[Pp]urchase[^\n]*?SAR\s*([\d,]+(?:\.\d{1,2})?)[^\n]*?(?:at|At|@)\s+([A-Za-z0-9][^\n،]{1,59}?)(?:\s+(?:Ref|ref)|\.\s*$|\n|$)/i,
 
-  // Generic Arabic debit fallback
-  /تم\s+خصم\s+.*?(\d[\d,]*(?:\.\d{1,2})?)\s*(?:ريال|SAR)(?:[^\n]*?)(?:لدى|في)\s+([^\n.،,\d]{2,60}?)(?:\s+رقم|\s+في\s+\d|\n|$)/iu,
+  // Arabic generic debit fallback
+  /تم\s+خصم[^\n]*?(\d[\d,]*(?:\.\d{1,2})?)\s*(?:ريال|SAR)[^\n]*?(?:لدى|في)\s+([^\n،]{2,60}?)(?:\s+(?:رقم|بتاريخ)|\s+\d{1,2}\/\d|\n|$)/iu,
 ];
 
 export function matchesSNB(sms: string): boolean {
