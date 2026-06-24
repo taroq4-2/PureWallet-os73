@@ -38,11 +38,7 @@ export default function TabLayout() {
         },
         tabBarBackground: () =>
           isIOS ? (
-            <BlurView
-              intensity={80}
-              tint="dark"
-              style={StyleSheet.absoluteFill}
-            />
+            <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
           ) : null,
         tabBarLabelStyle: { fontSize: 10, fontWeight: "600" as const },
       }}
@@ -51,9 +47,7 @@ export default function TabLayout() {
         name="index"
         options={{
           title: "الرئيسية",
-          tabBarIcon: ({ color, size }) => (
-            <Feather name="home" size={size} color={color} />
-          ),
+          tabBarIcon: ({ color, size }) => <Feather name="home" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -72,27 +66,28 @@ export default function TabLayout() {
         name="transactions"
         options={{
           title: "العمليات",
-          tabBarIcon: ({ color, size }) => (
-            <Feather name="list" size={size} color={color} />
-          ),
+          tabBarIcon: ({ color, size }) => <Feather name="list" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="budget"
+        options={{
+          title: "الميزانية",
+          tabBarIcon: ({ color, size }) => <Feather name="bar-chart-2" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: "الإعدادات",
-          tabBarIcon: ({ color, size }) => (
-            <Feather name="settings" size={size} color={color} />
-          ),
+          tabBarIcon: ({ color, size }) => <Feather name="settings" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="about"
         options={{
           title: "من نحن",
-          tabBarIcon: ({ color, size }) => (
-            <Feather name="info" size={size} color={color} />
-          ),
+          tabBarIcon: ({ color, size }) => <Feather name="info" size={size} color={color} />,
         }}
       />
     </Tabs>
