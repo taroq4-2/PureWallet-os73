@@ -24,8 +24,6 @@
     "android": {
       "package": "com.purewallet.app",
       "permissions": [
-        "android.permission.USE_BIOMETRIC",
-        "android.permission.USE_FINGERPRINT",
         "android.permission.READ_SMS",
         "android.permission.RECEIVE_SMS"
       ],
@@ -48,7 +46,7 @@
       "expo-web-browser",
       "expo-system-ui",
       [
-        "expo-local-authentication",
+        "expo-secure-store",
         {
           "faceIDPermission": "السماح بالوصول الآمن إلى بياناتك المالية"
         }
