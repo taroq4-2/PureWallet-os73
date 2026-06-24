@@ -1,29 +1,37 @@
 import type { ParsedTransaction } from "../smsParser";
 
 /**
- * SNB (البنك الأهلي السعودي) SMS patterns — senders: SNB-AIAhli, SNB, NCBSms
- * Patterns work whether or not "SNB"/"الأهلي" appears in the body.
- * Merchant names may contain dots (e.g. NOON.COM, AMAZON.COM).
+ * SNB (البنك الأهلي السعودي) SMS patterns.
+ * Senders: SNB-AIAhli, SNB, NCBSms
  */
-const PATTERNS: RegExp[] = [
-  // SNB English with bank name: SNB … SAR 120.00 … at MERCHANT
-  /SNB\b[^\n]*?SAR\s*([\d,]+(?:\.\d{1,2})?)[^\n]*?(?:at|At|@)\s+([A-Za-z0-9][^\n،]{1,59}?)(?:\s+(?:Ref|Bal|on\s+\d)|\n|$)/i,
+const EN_SNB =
+  /SNB\b[^\n]*?SAR\s*([\d,]+(?:\.\d{1,2})?)[^\n]*?(?:at|At|@)\s+([A-Za-z0-9][^\n،]{1,59}?)(?:\s+(?:Ref|Bal|on\s+\d)|\n|$)/i;
 
-  // Arabic: أُجريت عملية / تم خصم
-  /(?:أُجريت\s+عملية|تم\s+(?:خصم|إتمام))[^\n]*?(\d[\d,]*(?:\.\d{1,2})?)\s*(?:ريال|SAR)[^\n]*?(?:في|لدى)\s+([^\n،]{2,60}?)(?:\s+(?:رقم|بتاريخ|التاريخ)|\s+\d{1,2}\/\d|\n|$)/iu,
+const AR_AJRIYAT =
+  /(?:أُجريت\s+عملية|تم\s+(?:خصم|إتمام))[^\n]*?(\d[\d,]*(?:\.\d{1,2})?)\s*(?:ريال|SAR)[^\n]*?(?:في|لدى)\s+([^\n،]{2,60}?)(?:\s+(?:رقم|بتاريخ|التاريخ|في|على)|\s+\d{1,2}[\/\-]\d|\n|$)/iu;
 
-  // Arabic: البنك الأهلي … في/لدى …
-  /البنك\s+الأهلي[^\n]*?(\d[\d,]*(?:\.\d{1,2})?)\s*(?:ريال|SAR)[^\n]*?(?:في|لدى)\s+([^\n،]{2,60}?)(?:\s+(?:رقم|بتاريخ)|\s+\d{1,2}\/\d|\n|$)/iu,
+const AR_AHLI =
+  /البنك\s+الأهلي[^\n]*?(\d[\d,]*(?:\.\d{1,2})?)\s*(?:ريال|SAR)[^\n]*?(?:في|لدى)\s+([^\n،]{2,60}?)(?:\s+(?:رقم|بتاريخ|في)|\s+\d{1,2}[\/\-]\d|\n|$)/iu;
 
-  // English (no bank name in body): Deducted SAR 120.00 … at MERCHANT
-  /[Dd]educted[^\n]*?SAR\s*([\d,]+(?:\.\d{1,2})?)[^\n]*?(?:at|At|@)\s+([A-Za-z0-9][^\n،]{1,59}?)(?:\s+(?:Ref|Bal|ref|bal)|\s+\d{1,2}\/\d|\n|$)/i,
+const EN_DEDUCTED =
+  /[Dd]educted[^\n]*?SAR\s*([\d,]+(?:\.\d{1,2})?)[^\n]*?(?:at|At|@)\s+([A-Za-z0-9][^\n،]{1,59}?)(?:\s+(?:Ref|Bal|ref|bal)|\s+\d{1,2}[\/\-]\d|\n|$)/i;
 
-  // English: Purchase SAR 120.00 at MERCHANT
-  /[Pp]urchase[^\n]*?SAR\s*([\d,]+(?:\.\d{1,2})?)[^\n]*?(?:at|At|@)\s+([A-Za-z0-9][^\n،]{1,59}?)(?:\s+(?:Ref|ref)|\.\s*$|\n|$)/i,
+const EN_PURCHASE =
+  /[Pp]urchase[^\n]*?SAR\s*([\d,]+(?:\.\d{1,2})?)[^\n]*?(?:at|At|@)\s+([A-Za-z0-9][^\n،]{1,59}?)(?:\s+(?:Ref|ref)|\.?\s*$|\n|$)/i;
 
-  // Arabic generic debit fallback
-  /تم\s+خصم[^\n]*?(\d[\d,]*(?:\.\d{1,2})?)\s*(?:ريال|SAR)[^\n]*?(?:لدى|في)\s+([^\n،]{2,60}?)(?:\s+(?:رقم|بتاريخ)|\s+\d{1,2}\/\d|\n|$)/iu,
-];
+const AR_GENERIC_DEBIT =
+  /تم\s+خصم[^\n]*(\d[\d,]*(?:\.\d{1,2})?)\s*(?:ريال|SAR)[^\n]*?(?:لدى|في)\s+([^\n،]{2,60}?)(?:\s+(?:رقم|بتاريخ|في|على)|\s+\d{1,2}[\/\-]\d|\n|$)/iu;
+
+const PATTERNS = [EN_SNB, AR_AJRIYAT, AR_AHLI, EN_DEDUCTED, EN_PURCHASE, AR_GENERIC_DEBIT];
+
+function cleanMerchant(raw: string): string {
+  return raw
+    .trim()
+    .replace(/\s+(?:في|على|بتاريخ|التاريخ|الرصيد|رقم).*$/u, "")
+    .replace(/\s+\d{1,2}[\/\-]\d.*$/, "")
+    .replace(/\s+/g, " ")
+    .substring(0, 60);
+}
 
 export function matchesSNB(sms: string): boolean {
   return /الأهلي\s+السعودي|البنك\s+الأهلي|SNB\b|NCB\b/i.test(sms);
@@ -38,7 +46,7 @@ export function parseSNB(sms: string): ParsedTransaction | null {
         return {
           bankName: "البنك الأهلي السعودي",
           amount,
-          merchantName: m[2].trim().replace(/\s+/g, " ").substring(0, 60),
+          merchantName: cleanMerchant(m[2]),
           timestamp: Date.now(),
         };
       }
