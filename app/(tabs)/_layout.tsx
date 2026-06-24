@@ -2,24 +2,43 @@ import { Feather } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { Tabs } from "expo-router";
 import React from "react";
-import { Platform, StyleSheet, Text, View } from "react-native";
+import { Platform, StyleSheet, Text, View, useColorScheme } from "react-native";
 
 import { useTransactions } from "@/context/TransactionsContext";
 import { useColors } from "@/hooks/useColors";
 
-function TabBadge({ count }: { count: number }) {
+function TabBarBadge({ count }: { count: number }) {
   if (count === 0) return null;
   return (
-    <View style={styles.badge}>
-      <Text style={styles.badgeText}>{count > 9 ? "9+" : count}</Text>
+    <View style={badge.wrap}>
+      <Text style={badge.text}>{count > 9 ? "9+" : count}</Text>
     </View>
   );
 }
 
+const badge = StyleSheet.create({
+  wrap: {
+    position: "absolute",
+    top: -5,
+    right: -8,
+    backgroundColor: "#F43F5E",
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 3,
+  },
+  text: { color: "#fff", fontSize: 10, fontWeight: "700" },
+});
+
 export default function TabLayout() {
-  const colors = useColors();
-  const isIOS = Platform.OS === "ios";
-  const isWeb = Platform.OS === "web";
+  const colors      = useColors();
+  const colorScheme = useColorScheme();
+  const isDark      = colorScheme === "dark";
+  const isIOS       = Platform.OS === "ios";
+  const isWeb       = Platform.OS === "web";
+
   const { uncategorizedCount } = useTransactions();
 
   return (
@@ -34,13 +53,17 @@ export default function TabLayout() {
           borderTopColor: colors.border,
           borderTopWidth: 1,
           elevation: 0,
-          height: isWeb ? 84 : undefined,
+          ...(isWeb ? { height: 84 } : {}),
         },
         tabBarBackground: () =>
           isIOS ? (
-            <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
+            <BlurView
+              intensity={80}
+              tint={isDark ? "dark" : "dark"}
+              style={StyleSheet.absoluteFill}
+            />
           ) : null,
-        tabBarLabelStyle: { fontSize: 10, fontWeight: "600" as const },
+        tabBarLabelStyle: { fontSize: 10, fontWeight: "600" },
       }}
     >
       <Tabs.Screen
@@ -57,7 +80,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <View>
               <Feather name="bell" size={size} color={color} />
-              <TabBadge count={uncategorizedCount} />
+              <TabBarBadge count={uncategorizedCount} />
             </View>
           ),
         }}
@@ -67,13 +90,6 @@ export default function TabLayout() {
         options={{
           title: "العمليات",
           tabBarIcon: ({ color, size }) => <Feather name="list" size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="budget"
-        options={{
-          title: "الميزانية",
-          tabBarIcon: ({ color, size }) => <Feather name="bar-chart-2" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -93,19 +109,3 @@ export default function TabLayout() {
     </Tabs>
   );
 }
-
-const styles = StyleSheet.create({
-  badge: {
-    position: "absolute",
-    top: -5,
-    right: -8,
-    backgroundColor: "#F43F5E",
-    borderRadius: 8,
-    minWidth: 16,
-    height: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 3,
-  },
-  badgeText: { color: "#fff", fontSize: 10, fontWeight: "700" as const },
-});
