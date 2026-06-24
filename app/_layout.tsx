@@ -16,6 +16,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { LockScreen } from "@/components/LockScreen";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { BudgetProvider } from "@/context/BudgetContext";
 import { SmsProvider } from "@/context/SmsContext";
 import { TransactionsProvider } from "@/context/TransactionsContext";
 
@@ -60,13 +61,15 @@ export default function RootLayout() {
           <AuthProvider>
             <TransactionsProvider>
               <SmsProvider>
-                <GestureHandlerRootView style={{ flex: 1 }}>
-                  <KeyboardProvider>
-                    <AppGate>
-                      <RootLayoutNav />
-                    </AppGate>
-                  </KeyboardProvider>
-                </GestureHandlerRootView>
+                <BudgetProvider>
+                  <GestureHandlerRootView style={{ flex: 1 }}>
+                    <KeyboardProvider>
+                      <AppGate>
+                        <RootLayoutNav />
+                      </AppGate>
+                    </KeyboardProvider>
+                  </GestureHandlerRootView>
+                </BudgetProvider>
               </SmsProvider>
             </TransactionsProvider>
           </AuthProvider>
