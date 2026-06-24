@@ -1,17 +1,18 @@
 /**
  * SMS Parser — delegates to bank-specific parsers
  * ─────────────────────────────────────────────────────────────────────────
- * Sender-first routing: when msg.address (sender ID) is provided it is used
- * to pick the correct parser directly — fixing the case where the SMS body
- * does NOT include the bank name (very common for Saudi banks).
+ * Each bank has its own dedicated parser module under utils/banks/.
+ * The dispatcher tries each parser in order; the first match wins.
  *
- * Registered sender IDs
- *   AlRajhiBank  → بنك الراجحي
- *   SNB-AIAhli   → البنك الأهلي السعودي
- *   ANBSaudi     → البنك العربي الوطني
- *   RiyadBank    → بنك الرياض
+ * parseSms(body, sender?) — pass the SMS address/sender for best accuracy.
+ * The sender field (e.g. "AlRajhiBank", "SNB-AIAhli") is the most reliable
+ * way to identify the bank, since the SMS body may not contain the bank name.
  */
 import {
+  ALRAJHI_SENDERS,
+  ANB_SENDERS,
+  RIYAD_SENDERS,
+  SNB_SENDERS,
   matchesAlRajhi, parseAlRajhi,
   matchesSNB,     parseSNB,
   matchesANB,     parseANB,
@@ -25,11 +26,39 @@ export interface ParsedTransaction {
   timestamp: number;
 }
 
-// ── OTP guard ─────────────────────────────────────────────────────────────────
+/**
+ * All known bank sender IDs — used to pre-filter SMS from inbox.
+ * Normalised to uppercase with dashes/spaces removed for matching.
+ */
+export const ALL_BANK_SENDERS = [
+  ...ALRAJHI_SENDERS,
+  ...SNB_SENDERS,
+  ...ANB_SENDERS,
+  ...RIYAD_SENDERS,
+  // Extra common variants
+  "SABB", "SAB", "ALBILAD", "BILAD", "ALJAZIRA", "JAZIRA", "ALINMA",
+];
+
+export function isKnownBankSender(sender: string): boolean {
+  const s = sender.toUpperCase().replace(/[-_\s]/g, "");
+  return ALL_BANK_SENDERS.some((known) =>
+    s.includes(known.toUpperCase().replace(/[-_\s]/g, ""))
+  );
+}
+
 const OTP_KEYWORDS = [
-  "OTP", "Verification Code", "one-time", "temporary password",
-  "رمز التحقق", "رمز التأكيد", "رمز تفعيل", "رمز مؤقت",
-  "كلمة المرور المؤقتة", "تأكيد الدخول", "رمز الدخول", "رمز المرور",
+  "OTP",
+  "Verification Code",
+  "one-time",
+  "temporary password",
+  "رمز التحقق",
+  "رمز التأكيد",
+  "رمز تفعيل",
+  "رمز مؤقت",
+  "كلمة المرور المؤقتة",
+  "تأكيد الدخول",
+  "رمز الدخول",
+  "رمز المرور",
 ];
 
 export function isOtpMessage(sms: string): boolean {
@@ -37,63 +66,11 @@ export function isOtpMessage(sms: string): boolean {
   return OTP_KEYWORDS.some((kw) => lower.includes(kw.toLowerCase()));
 }
 
-// ── Sender → bank key map ─────────────────────────────────────────────────────
-/**
- * Normalised (uppercase, non-alphanumeric stripped) sender IDs.
- * Extend this list to support additional banks.
- */
-export const KNOWN_SENDER_MAP: Record<string, string> = {
-  // بنك الراجحي
-  ALRAJHIBANK:  "alrajhi",
-  ALRAJHI:      "alrajhi",
-  RAJHIBANK:    "alrajhi",
-  RAJHI:        "alrajhi",
-
-  // البنك الأهلي السعودي (SNB / NCB)
-  SNBAIAHLI:    "snb",
-  SNBAHLI:      "snb",
-  ASNB:         "snb",
-  SNB:          "snb",
-  NCBSMS:       "snb",
-  NCB:          "snb",
-
-  // البنك العربي الوطني
-  ANBSAUDI:     "anb",
-  ANB:          "anb",
-
-  // بنك الرياض
-  RIYADBANK:    "riyad",
-  RIYAD:        "riyad",
-};
-
-function normSender(s: string): string {
-  return s.toUpperCase().replace(/[^A-Z0-9]/g, "");
+interface BankEntry {
+  matches: (sms: string, sender?: string) => boolean;
+  parse:   (sms: string, sender?: string) => ParsedTransaction | null;
 }
 
-export function resolveSenderBank(sender: string): string | null {
-  if (!sender) return null;
-  const s = normSender(sender);
-  if (KNOWN_SENDER_MAP[s]) return KNOWN_SENDER_MAP[s];
-  // Substring fallback — covers variants like "AlRajhiBank-Alerts"
-  if (s.includes("ALRAJHI") || s.includes("RAJHI"))                  return "alrajhi";
-  if (s.includes("SNB") || s.includes("AIAHLI") || s.includes("AHLI")) return "snb";
-  if (s.includes("ANB"))                                             return "anb";
-  if (s.includes("RIYAD"))                                           return "riyad";
-  return null;
-}
-
-// ── Parser registry ───────────────────────────────────────────────────────────
-type BankParser  = (sms: string) => ParsedTransaction | null;
-type BankMatcher = (sms: string) => boolean;
-
-const PARSER_MAP: Record<string, BankParser> = {
-  alrajhi: parseAlRajhi,
-  snb:     parseSNB,
-  anb:     parseANB,
-  riyad:   parseRiyad,
-};
-
-interface BankEntry { matches: BankMatcher; parse: BankParser }
 const BANKS: BankEntry[] = [
   { matches: matchesAlRajhi, parse: parseAlRajhi },
   { matches: matchesSNB,     parse: parseSNB     },
@@ -101,61 +78,39 @@ const BANKS: BankEntry[] = [
   { matches: matchesRiyad,   parse: parseRiyad   },
 ];
 
-// ── Main entry point ──────────────────────────────────────────────────────────
 /**
  * Parses a bank SMS into a ParsedTransaction.
  *
- * @param sms    Raw SMS body text
- * @param sender Sender address / alphanumeric ID (e.g. "AlRajhiBank",
- *               "SNB-AIAhli").  When present, sender-first routing selects
- *               the correct parser even when the bank name is missing from
- *               the message body.
+ * @param sms    - The full SMS message body.
+ * @param sender - The SMS sender address / originator (e.g. "AlRajhiBank").
+ *                 Providing the sender greatly improves bank detection accuracy.
+ *
+ * Returns null for OTP messages, unknown senders, or unrecognised formats.
  */
 export function parseSms(sms: string, sender?: string): ParsedTransaction | null {
   if (!sms?.trim()) return null;
   if (isOtpMessage(sms)) return null;
 
-  // 1 ── Sender-first routing ───────────────────────────────────────────────
-  if (sender) {
-    const bankKey = resolveSenderBank(sender);
-    if (bankKey) {
-      const parser = PARSER_MAP[bankKey];
-      if (parser) {
-        const result = parser(sms);
-        if (result) return result;
-        // Pattern mismatch — fall through to content scan
-      }
-    }
-  }
-
-  // 2 ── Content-based fallback ─────────────────────────────────────────────
   for (const bank of BANKS) {
-    if (bank.matches(sms)) {
-      return bank.parse(sms);
+    if (bank.matches(sms, sender)) {
+      return bank.parse(sms, sender);
     }
   }
-
   return null;
 }
 
-/** Human-readable bank name from sender ID. */
+/**
+ * Detects the bank display name from the SMS sender ID.
+ */
 export function detectBank(sender: string): string {
-  const s = sender.toUpperCase();
-  if (s.includes("ALRAJHI") || s.includes("RAJHI"))        return "بنك الراجحي";
-  if (s.includes("SNB")     || s.includes("AIAHLI"))       return "البنك الأهلي السعودي";
-  if (s.includes("ANB")     || s.includes("ARABNATIONAL"))  return "البنك العربي الوطني";
-  if (s.includes("RIYAD"))                                 return "بنك الرياض";
-  if (s.includes("SABB")    || s.includes("SAB"))           return "بنك ساب";
-  if (s.includes("ALBILAD") || s.includes("BILAD"))         return "بنك البلاد";
+  const s = sender.toUpperCase().replace(/[-_\s]/g, "");
+  if (s.includes("ALRAJHI") || s.includes("RAJHI")) return "بنك الراجحي";
+  if (s.includes("SNB") || s.includes("AHLI") || s.includes("NCB")) return "البنك الأهلي السعودي";
+  if (s.includes("ANB") || s.includes("ARABNATIONAL"))               return "البنك العربي الوطني";
+  if (s.includes("RIYAD"))                                            return "بنك الرياض";
+  if (s.includes("SABB") || s.includes("SAB"))                       return "بنك ساب";
+  if (s.includes("ALBILAD") || s.includes("BILAD"))                  return "بنك البلاد";
+  if (s.includes("ALJAZIRA") || s.includes("JAZIRA"))                return "بنك الجزيرة";
+  if (s.includes("ALINMA") || s.includes("INMA"))                    return "بنك الإنماء";
   return "بنك";
-}
-
-/** Returns supported sender IDs grouped by bank for display in UI. */
-export function getKnownSenderDisplay(): { bank: string; senders: string[] }[] {
-  return [
-    { bank: "بنك الراجحي",          senders: ["AlRajhiBank"] },
-    { bank: "البنك الأهلي السعودي", senders: ["SNB-AIAhli", "SNB"] },
-    { bank: "البنك العربي الوطني",  senders: ["ANBSaudi",   "ANB"] },
-    { bank: "بنك الرياض",           senders: ["RiyadBank"] },
-  ];
 }
